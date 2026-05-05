@@ -16,12 +16,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf ->csrf.disable())
-                .authorizeHttpRequests(auth ->auth
-                        .requestMatchers("api/auth/**").permitAll()
-                        .anyRequest().authenticated()
+                .csrf(csrf -> csrf.disable()) // Für APIs oft deaktiviert
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll() // Login & Register frei
+                        .anyRequest().authenticated() // Alles andere geschützt
                 );
         return http.build();
     }

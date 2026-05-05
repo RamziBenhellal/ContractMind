@@ -24,7 +24,6 @@ public class User {
     @NotBlank
     private String password;
 
-    @OneToMany(mappedBy = "user" , cascade = CascadeType.ALL)
-    private List<Contract> contracts;
+
     
 }

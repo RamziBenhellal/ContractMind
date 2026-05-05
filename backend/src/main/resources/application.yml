@@ -4,8 +4,8 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/contractmind
-    username: postgres
-    password: yourpassword
+    username: contractmind_user
+    password: contractmind_pass
   jpa:
     hibernate:
       ddl-auto: update

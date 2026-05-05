@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class JwtUtil {
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.ES256);
+    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private final long expirationMs = 86400000;
 
     public String generateToken(String username) {

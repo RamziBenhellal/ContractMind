@@ -1,0 +1,24 @@
+<div class="auth-container">
+  <h2>ContractMind Login</h2>
+
+  <div *ngIf="errorMessage" class="error-box">{{ errorMessage }}</div>
+
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" placeholder="Dein Email">
+    </div>
+
+    <div class="form-group">
+      <label for="password">Passwort</label>
+      <input id="password" type="password" formControlName="password">
+    </div>
+
+    <button type="submit" [disabled]="loginForm.invalid">Einloggen</button>
+  </form>
+
+  <p class="switch-page">
+    Noch keinen Account? <a routerLink="/register">Jetzt registrieren</a>
+  </p>
+</div>

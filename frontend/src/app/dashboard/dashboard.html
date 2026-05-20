@@ -1,0 +1,156 @@
+<div class="dashboard-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">ContractMind</div>
+    <nav>
+      <a href="#" class="active">📊 Übersicht</a>
+      <a href="/add-contract">📄 Vertrag hinfügen </a>
+      <a href="#">📄 Meine Verträge</a>
+      <a href="#">🌟 Wunsch-Planer</a>
+      <a href="#">⚙️ Einstellungen</a>
+    </nav>
+    <button class="logout-btn" (click)="logout()">🚪 Logout</button>
+  </aside>
+<!-- HAUPTINHALT -->
+  <main class="main-content">
+    <header class="topbar">
+      <h1>{{ email }}! 👋</h1>
+      <p>Hier ist dein aktueller Finanz-Überblick.</p>
+    </header>
+
+    <!-- KENNZAHLEN (Cards) -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Fixkosten / Monat</h3>
+        <!-- FIX 1: number Pipe statt currency für 100% Stabilität -->
+        <p class="highlight-number">{{ totalCost | number:'1.2-2' }} €</p>
+      </div>
+      <div class="stat-card">
+        <h3>Aktive Verträge</h3>
+        <!-- FIX 2: Das Fragezeichen (?) verhindert Abstürze beim Laden -->
+        <p class="highlight-number">{{ contracts.length }}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Nächste Kündigungsfrist</h3>
+
+        @if (nextDeadlineContract) {
+          <p class="highlight-warning" style="color: #e74c3c; font-weight: bold; font-size: 20px;">
+            {{ nextDeadlineContract.endDate | date:'dd.MM.yyyy' }}
+          </p>
+          <p style="margin-top: 5px; color: #555; font-size: 14px;">
+            bei <strong>{{ nextDeadlineContract.provider }}</strong>
+          </p>
+        } @else {
+          <p class="highlight-warning" style="color: #27ae60; font-size: 16px;">
+            🎉 Keine Fristen in Sicht
+          </p>
+        }
+      </div>
+    </div>
+
+    <!-- VERTRAGS-TABELLE -->
+    <div class="content-section">
+      <h2>Letzte Verträge</h2>
+
+      <!-- FIX 3: contracts?.length mit Fragezeichen -->
+<table class="contract-table" *ngIf="contracts.length > 0; else noContracts">
+          <thead>
+        <tr>
+          <th>Anbieter</th>
+          <th>Kategorie</th>
+          <th>Monatliche Kosten</th>
+          <th>Laufzeit bis</th>
+          <th>Aktion</th> <!-- 🆕 NEUE SPALTE -->
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let contract of contracts">
+          <td>
+            <strong>{{ contract.provider }}</strong>
+            <span *ngIf="contract.status === 'WAITING_FOR_AI'" class="badge badge-ai">⚙️ KI analysiert...</span>
+            <span *ngIf="contract.status === 'NEEDS_REVIEW'" class="badge badge-review">⚠️ Prüfung ausstehend</span>
+            <span *ngIf="contract.status === 'VERIFIED'" class="badge badge-verified">✅ Bestätigt</span>
+          </td>
+          <td>{{ contract.contractType }}</td>
+          <td>{{ contract.monthlyCost | number:'1.2-2' }} €</td>
+          <td>
+            @if (contract.endDate === '2099-12-31') {
+              <span style="color: #888; font-style: italic;">unbefristet</span>
+            } @else if (contract.endDate) {
+              <!-- Bonus: Das | date wandelt 2024-10-01 in 01.10.2024 um! -->
+              {{ contract.endDate | date:'dd.MM.yyyy' }}
+            } @else {
+              -
+            }
+          </td>
+
+          <!-- 🆕 NEUER BUTTON -->
+          <td>
+            <button *ngIf="contract.status === 'NEEDS_REVIEW'"
+                    (click)="openReviewModal(contract)"
+                    style="background: #f2a900; color: #1a2a6c; padding: 5px 10px; font-size: 12px;">
+              🔍 Daten prüfen
+            </button>
+            <button *ngIf="contract.status === 'VERIFIED'"
+                    (click)="openReviewModal(contract)"
+                    style="background: transparent; border: 1px solid #ccc; color: #333; padding: 5px 10px; font-size: 12px;">
+              ✏️ Bearbeiten
+            </button>
+            <button (click)="deleteContract(contract.id, contract.provider)"
+                    style="background: transparent; border: 1px solid #e74c3c; color: #e74c3c; padding: 5px 10px; font-size: 12px; margin-left: 5px;">
+              🗑️
+            </button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <!-- WENN KEINE VERTRÄGE DA SIND -->
+      <ng-template #noContracts>
+        <div style="text-align: center; padding: 30px; color: #888;">
+          <p>📄 Du hast noch keine Verträge hinzugefügt oder sie laden noch.</p>
+        </div>
+      </ng-template>
+    </div>
+  </main>
+  <div class="modal-overlay" *ngIf="contractToReview">
+  <div class="modal-content">
+    <h2>📝 Vertrag überprüfen</h2>
+    <p>Bitte prüfe die Daten, die unsere KI aus dem Dokument ausgelesen hat.</p>
+
+    <form (ngSubmit)="saveContractReview()">
+      <div class="form-group">
+        <label>Anbieter</label>
+        <input type="text" [(ngModel)]="contractToReview.provider" name="provider" required>
+      </div>
+
+      <div class="form-group">
+        <label>Kategorie</label>
+        <input type="text" [(ngModel)]="contractToReview.contractType" name="contractType" required>
+      </div>
+
+      <div class="form-group">
+        <label>Monatliche Kosten (€)</label>
+        <input type="number" step="0.01" [(ngModel)]="contractToReview.monthlyCost" name="monthlyCost" required>
+      </div>
+      <div class="form-group">
+        <label>Vertragsende</label>
+        <input type="date" [(ngModel)]="contractToReview.endDate" name="endDate">
+        <!-- 🆕 Kleiner Hinweis für den Nutzer -->
+        <small style="color: #666; font-size: 11px;">*Für unbefristete Verträge wähle das Jahr 2099.</small>
+      </div>
+
+
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button type="submit" [disabled]="isSaving" style="background: #1a2a6c; color: white; flex: 1;">
+          {{ isSaving ? 'Speichert...' : '✅ Bestätigen & Speichern' }}
+        </button>
+        <button type="button" (click)="closeReviewModal()" style="background: transparent; color: #888; border: 1px solid #ccc; flex: 1;">
+          Abbrechen
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+</div>

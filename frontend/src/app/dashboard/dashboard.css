@@ -1,0 +1,52 @@
+/* Styling für das Pop-up */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: popIn 0.3s ease-out forwards;
+}
+
+/* Kleine Badges für den Status */
+.badge {
+  margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;
+}
+.badge-ai { background-color: #ffeaa7; color: #d35400; }
+.badge-review { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.badge-verified { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+.contract-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.contract-table tbody tr:hover {
+  background-color: #f4f7fc; /* Ein sehr helles, edles Blau/Grau */
+}
+
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover:not([disabled]) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+button:active:not([disabled]) {
+  transform: translateY(0);
+}

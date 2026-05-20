@@ -13,7 +13,13 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
+contractmind:
+  upload-dir: uploads/contracts
 # Custom Settings für den KI-Service
 ai-service:
   url: http://localhost:8000  # Adresse des Python FastAPI Dienstes

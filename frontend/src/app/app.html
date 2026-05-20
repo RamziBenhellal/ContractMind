@@ -1,1 +1,24 @@
-<router-outlet></router-outlet>
+<!-- 🌟 DAS GLOBALE MENÜ (Bleibt immer sichtbar) -->
+<nav class="global-navbar">
+  <div class="nav-brand">
+    🚀 ContractAI
+  </div>
+
+  <ul class="nav-links">
+    <!-- routerLinkActive="active" gibt dem Link automatisch eine andere Farbe, wenn du auf der Seite bist -->
+    <li>
+      <a routerLink="/dashboard" routerLinkActive="active-link">📊 Dashboard</a>
+    </li>
+    <li>
+      <a routerLink="/add-contract" routerLinkActive="active-link">➕ Neuer Vertrag</a>
+    </li>
+  </ul>
+
+  <div class="nav-actions">
+    <button class="logout-btn" (click)="logout()">🚪 Logout</button>
+  </div>
+</nav>
+
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>

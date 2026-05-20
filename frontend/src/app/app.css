@@ -1,0 +1,78 @@
+/* Die Navigation Bar */
+.global-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1a2a6c; /* Unser dunkles Blau */
+  padding: 0 30px;
+  height: 70px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+  /* Damit das Menü beim Scrollen immer oben bleibt: */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Das Logo / Der Titel */
+.nav-brand {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* Die Liste mit den Links */
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 30px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Wie die Links aussehen */
+.nav-links a {
+  color: #aeb8d6;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* Wenn man mit der Maus drüber fährt */
+.nav-links a:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Wenn man sich gerade auf dieser Seite befindet! */
+.nav-links a.active-link {
+  color: white;
+  background-color: #f2a900; /* Unser Warn-Orange/Gelb */
+}
+
+/* Der Logout Button */
+.logout-btn {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: white;
+  color: #1a2a6c;
+}
+
+/* Damit die Seiten (Dashboard, Upload) nicht am Menü kleben */
+.main-content {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto; /* Zentriert den Inhalt */
+}

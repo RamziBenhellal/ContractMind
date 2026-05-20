@@ -27,8 +27,8 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       this.authService.login(this.loginForm.value).subscribe({
         next: (response) => {
-          console.log('login successfully ! redirected to Login ...  ');
-          //this.router.navigate(['/dashboard']);
+          //console.log('login successfully ! redirected to Login ...  ');
+          this.router.navigate(['/dashboard']);
         },
         error: (err) => {
           this.errorMessage = 'Login Failed ! verify your email address or password';

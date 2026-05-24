@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth';
 import { ChatComponent } from './chat/chat';
 
@@ -12,10 +12,14 @@ import { ChatComponent } from './chat/chat';
 })
 export class App {
 
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   protected readonly title = signal('frontend');
+  private router = inject(Router);
+
+
 
   logout(){
     this.authService.logout();
+    this.router.navigate(['login']);
   }
 }

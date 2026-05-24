@@ -30,6 +30,11 @@ export class AuthService {
       })
     )
   }
+
+  isLoggedIn(): boolean {
+    return !!localStorage.getItem('jwt_token'); // Oder wie auch immer du deinen Login-Status speicherst
+  }
+
   logout():void {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('email');

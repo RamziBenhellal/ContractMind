@@ -1,28 +1,30 @@
-<div class="auth-container">
-  <h2>Willkommen bei ContractMind</h2>
-  <p>Erstelle deinen Account</p>
+<div class="auth-wrapper">
+  <div class="glass-panel auth-container">
+    <h2 class="auth-title">Willkommen bei ContractMind</h2>
+    <p class="auth-subtitle">Erstelle deinen Account und starte durch</p>
 
-  <!-- Wenn es Erfolgs- oder Fehlermeldungen gibt, zeigen wir sie hier -->
-  <div *ngIf="errorMessage" class="error-box">{{ errorMessage }}</div>
-  <div *ngIf="successMessage" class="success-box">{{ successMessage }}</div>
+    @if (errorMessage) { <div class="error-glass-box">{{ errorMessage }}</div> }
+    @if (successMessage) { <div class="success-glass-box">{{ successMessage }}</div> }
 
-  <!-- [formGroup] verbindet das HTML mit unserer registerForm aus TypeScript -->
-  <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
 
-    <div class="form-group">
-      <label for="email">E-Mail</label>
-      <input id="email" type="email" formControlName="email" placeholder="mail@beispiel.de">
-    </div>
+      <div class="premium-input-group">
+        <label for="email">E-Mail</label>
+        <input id="email" type="email" formControlName="email" placeholder="deine@email.de" class="ultra-modern-input">
+      </div>
 
-    <div class="form-group">
-      <label for="password">Passwort</label>
-      <input id="password" type="password" formControlName="password" placeholder="Mindestens 6 Zeichen">
-    </div>
+      <div class="premium-input-group">
+        <label for="password">Passwort</label>
+        <input id="password" type="password" formControlName="password" placeholder="Mindestens 6 Zeichen" class="ultra-modern-input">
+      </div>
 
-    <button type="submit" [disabled]="registerForm.invalid">Kostenlos Registrieren</button>
-  </form>
+      <button type="submit" [disabled]="registerForm.invalid" class="premium-save-btn full-width">
+        Kostenlos Registrieren
+      </button>
+    </form>
 
-  <p class="switch-page">
-    Hast du schon einen Account? <a routerLink="/login">Hier einloggen</a>
-  </p>
+    <p class="switch-page">
+      Hast du schon einen Account? <a routerLink="/login">Hier einloggen</a>
+    </p>
+  </div>
 </div>

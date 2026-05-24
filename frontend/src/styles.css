@@ -19,3 +19,54 @@ body, html {
   border: 1px solid rgba(255, 255, 255, 0.5); /* Ein feiner, heller Rand für die Lichtkante */
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); /* Ein weicher Schatten */
 }
+
+/* --- Globale Glas-Panel Basis --- */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+}
+
+/* --- Globale Premium-Inputs --- */
+.premium-input-group { margin-bottom: 22px; }
+.premium-input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1a2a6c;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.ultra-modern-input {
+  width: 100%;
+  padding: 15px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.6);
+  color: #2d3748;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.ultra-modern-input:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #2a48b8;
+  outline: none;
+}
+
+/* --- Globale Premium-Buttons --- */
+.premium-save-btn {
+  background: linear-gradient(135deg, #1a2a6c, #2a48b8);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.full-width { width: 100%; }

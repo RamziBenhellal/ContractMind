@@ -1,4 +1,5 @@
-FROM python:3.11-slim
+# HIER GEÄNDERT: Das volle Image statt der slim-Version
+FROM python:3.11
 
 WORKDIR /app
 
@@ -9,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopiere den restlichen Code
 COPY . .
 
-# Port freigeben (falls FastAPI/Flask genutzt wird, oft 8000 oder 5000)
+# Port freigeben
 EXPOSE 8000
 
-# Startbefehl (passe dies an, wie dein main.py gestartet wird)
+# Startbefehl
 CMD ["python", "main.py"]

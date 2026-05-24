@@ -22,7 +22,7 @@ public class ChatService {
     private ContractRepository contractRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
-    private final String PYTHON_CHAT_URL = "https://localhost:8000/api/chat/ask";
+    private final String PYTHON_CHAT_URL = "http://localhost:8000/api/chat/ask";
 
     public String askAiAssistant(String question, String email) {
         List<Contract> userContracts = contractRepository.findContractByUserEmailAndStatus(email, "VERIFIED");

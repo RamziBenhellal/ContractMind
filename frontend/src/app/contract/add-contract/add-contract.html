@@ -1,85 +1,110 @@
-<div class="upload-container" style="max-width: 600px; margin: 50px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-  <h2 style="text-align: center; color: #1a2a6c;">Neuen Vertrag hinzufügen</h2>
+<div class="upload-wrapper">
+  <!-- Der Hauptcontainer im Glas-Look -->
+  <div class="glass-panel upload-container">
+    <h2 class="premium-title">Neuen Vertrag hinzufügen</h2>
 
-  <!-- 🎛️ DIE SCHALTER (TOGGLE) -->
-  <div style="display: flex; gap: 10px; margin-bottom: 30px; margin-top: 20px;">
-    <button (click)="entryMode = 'upload'"
-            [style.background]="entryMode === 'upload' ? '#1a2a6c' : '#eee'"
-            [style.color]="entryMode === 'upload' ? 'white' : '#333'"
-            style="flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-      📄 PDF hochladen
-    </button>
-    <button (click)="entryMode = 'manual'"
-            [style.background]="entryMode === 'manual' ? '#1a2a6c' : '#eee'"
-            [style.color]="entryMode === 'manual' ? 'white' : '#333'"
-            style="flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-      ✍️ Manuell eintragen
-    </button>
-  </div>
-
-  <!-- 📂 BEREICH 1: PDF UPLOAD -->
-  @if (entryMode === 'upload') {
-    <div class="auth-container" style="max-width: 500px; margin-top: 50px; text-align: center;">
-      <h2>📄 Vertrag hochladen</h2>
-      <p>Lade dein PDF hoch. Unsere KI erledigt den Rest!</p>
-
-      <div *ngIf="errorMessage" class="error-box">{{ errorMessage }}</div>
-
-      <!-- Eine schöne Upload-Box -->
-      <div style="border: 2px dashed #ccc; padding: 40px; margin: 20px 0; border-radius: 10px; background: #fafafa;">
-        <input type="file" id="file" accept=".pdf" (change)="onFileSelected($event)" style="display: none;" #fileInput>
-
-        <button type="button" (click)="fileInput.click()" style="background: white; color: #1a2a6c; border: 2px solid #1a2a6c; margin-bottom: 15px;">
-          📁 PDF auswählen
-        </button>
-
-        <div *ngIf="selectedFile" style="color: green; font-weight: bold;">
-          ✓ {{ selectedFile.name }}
-        </div>
-      </div>
-
-      <button (click)="onSubmit()" [disabled]="!selectedFile || isUploading" style="background: #f2a900; color: #1a2a6c; font-weight: bold;">
-        {{ isUploading ? 'Lade hoch...' : 'Hochladen & KI Analyse starten' }}
+    <!-- 🎛️ DIE SCHALTER (TOGGLE) ALS GLAS-PILLEN -->
+    <div class="toggle-group">
+      <button class="toggle-btn"
+              [class.active]="entryMode === 'upload'"
+              (click)="entryMode = 'upload'">
+        📄 PDF hochladen
       </button>
-
-      <button type="button" routerLink="/dashboard" style="background: transparent; color: #888; margin-top: 10px;">
-        Abbrechen
+      <button class="toggle-btn"
+              [class.active]="entryMode === 'manual'"
+              (click)="entryMode = 'manual'">
+        ✍️ Manuell eintragen
       </button>
     </div>
-  }
 
-  <!-- ✍️ BEREICH 2: MANUELLES FORMULAR -->
-  @if (entryMode === 'manual') {
-    <form (ngSubmit)="saveManualContract()">
-      <div class="form-group" style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Anbieter</label>
-        <input type="text" [(ngModel)]="newManualContract.provider" name="provider" required
-               style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+    <!-- 📂 BEREICH 1: PDF UPLOAD -->
+    @if (entryMode === 'upload') {
+      <div class="section-content animate-fade">
+        <p class="subtitle">Lade dein PDF hoch. Unsere KI erledigt den Rest!</p>
+
+        @if (errorMessage) {
+          <div class="error-glass-box">{{ errorMessage }}</div>
+        }
+
+        <!-- Die Premium Upload-Dropzone -->
+        <div class="glass-dropzone">
+          <input type="file" id="file" accept=".pdf" (change)="onFileSelected($event)" class="hidden-input" #fileInput>
+
+          <button type="button" class="glass-btn select-file-btn" (click)="fileInput.click()">
+            📁 PDF auf deinem Gerät suchen
+          </button>
+
+          @if (selectedFile) {
+            <div class="file-success-text">
+              <span class="success-icon">✓</span> {{ selectedFile.name }}
+            </div>
+          }
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+          <button type="button" class="glass-btn cancel-btn" routerLink="/dashboard">
+            Abbrechen
+          </button>
+
+          <button class="premium-ai-btn" (click)="onSubmit()" [disabled]="!selectedFile || isUploading">
+            @if (isUploading) {
+              <span class="spin-icon">⏳</span> Lade hoch...
+            } @else {
+              ✨ Hochladen & KI Analyse
+            }
+          </button>
+        </div>
       </div>
+    }
 
-      <div class="form-group" style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Kategorie (z.B. Internet, Strom)</label>
-        <input type="text" [(ngModel)]="newManualContract.contractType" name="contractType" required
-               style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-      </div>
+    <!-- ✍️ BEREICH 2: MANUELLES FORMULAR -->
+    @if (entryMode === 'manual') {
+      <form (ngSubmit)="saveManualContract()" class="section-content animate-fade manual-form-container">
 
-      <div class="form-group" style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Monatliche Kosten (€)</label>
-        <input type="number" step="0.01" [(ngModel)]="newManualContract.monthlyCost" name="monthlyCost" required
-               style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-      </div>
+        <div class="form-group premium-input-group">
+          <label>🏢 Anbieter</label>
+          <div class="input-wrapper">
+            <input type="text" [(ngModel)]="newManualContract.provider" name="provider" placeholder="z.B. Telekom, Allianz..." required class="ultra-modern-input">
+          </div>
+        </div>
 
-      <div class="form-group" style="margin-bottom: 25px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Vertragsende</label>
-        <input type="date" [(ngModel)]="newManualContract.endDate" name="endDate"
-               style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-        <small style="color: #666; font-size: 11px;">*Für unbefristete Verträge wähle das Jahr 2099.</small>
-      </div>
+        <div class="form-group premium-input-group">
+          <label>🏷️ Kategorie <span class="label-hint">(z.B. Internet, Strom)</span></label>
+          <div class="input-wrapper">
+            <input type="text" [(ngModel)]="newManualContract.contractType" name="contractType" placeholder="z.B. Internet" required class="ultra-modern-input">
+          </div>
+        </div>
 
-      <button type="submit" [disabled]="isSaving"
-              style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer;">
-        {{ isSaving ? 'Speichert...' : '✅ Vertrag speichern' }}
-      </button>
-    </form>
-  }
+        <div class="form-row">
+          <div class="form-group premium-input-group half-width">
+            <label>💶 Monatliche Kosten</label>
+            <div class="input-wrapper cost-wrapper">
+              <input type="number" step="0.01" [(ngModel)]="newManualContract.monthlyCost" name="monthlyCost" placeholder="0.00" required class="ultra-modern-input has-suffix">
+              <span class="input-suffix">€</span>
+            </div>
+          </div>
+
+          <div class="form-group premium-input-group half-width">
+            <label>⏳ Vertragsende</label>
+            <div class="input-wrapper">
+              <input type="date" [(ngModel)]="newManualContract.endDate" name="endDate" class="ultra-modern-input">
+            </div>
+            <small class="helper-text">*Für unbefristete Verträge wähle das Jahr 2099.</small>
+          </div>
+        </div>
+
+        <div class="button-group-full form-footer">
+          <button type="submit" class="premium-save-btn full-width glowing-btn" [disabled]="isSaving">
+            @if (isSaving) {
+              <span class="spin-icon">⏳</span> Vertrag wird gespeichert...
+            } @else {
+              ✨ Vertrag manuell speichern
+            }
+          </button>
+        </div>
+
+      </form>
+    }
+  </div>
 </div>

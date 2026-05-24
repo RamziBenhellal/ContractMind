@@ -1,1 +1,35 @@
-<p>assistant works!</p>
+<div class="assistant-container">
+  <div class="glass-panel main-chat-window">
+
+    <div class="chat-header">
+      <h2>✨ ContractMind KI Assistent</h2>
+      <p>Stelle komplexe Fragen zu deinen Finanzen und Verträgen.</p>
+    </div>
+
+    <div class="chat-body">
+      <div class="chat-body" #scrollMe>
+      @for (msg of messages; track msg) {
+        <div class="message-wrapper" [class.user]="msg.sender === 'user'" [class.bot]="msg.sender === 'bot'">
+          <div class="message-bubble">
+            {{ msg.text }}
+          </div>
+        </div>
+      }
+      </div>
+
+      @if (isLoading) {
+        <div class="message-wrapper bot">
+          <div class="message-bubble typing">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="chat-footer">
+      <input type="text" [(ngModel)]="currentInput" (keyup.enter)="sendMessage()" placeholder="Schreibe deine Nachricht..." [disabled]="isLoading">
+      <button class="send-btn" (click)="sendMessage()" [disabled]="!currentInput.trim() || isLoading">➤</button>
+    </div>
+
+  </div>
+</div>

@@ -1,1 +1,44 @@
-<p>chat works!</p>
+<!-- Der schwebende Button im Glas-Look -->
+<button class="chat-toggle-btn glass-panel" (click)="toggleChat()">
+  <span class="chat-icon">🤖</span>
+</button>
+
+<!-- Das Chat-Fenster (mit der globalen glass-panel Klasse!) -->
+@if (isOpen) {
+  <div class="chat-window glass-panel">
+
+    <div class="chat-header">
+      <div class="header-title">
+        <span class="status-dot"></span>
+        <h4>KI Assistent</h4>
+      </div>
+      <button class="close-btn" (click)="toggleChat()">✖</button>
+    </div>
+
+    <div class="chat-body">
+      <div class="chat-body" #scrollMe>
+      @for (msg of messages; track msg) {
+        <div class="message-wrapper" [class.user]="msg.sender === 'user'" [class.bot]="msg.sender === 'bot'">
+          <div class="message-bubble">
+            {{ msg.text }}
+          </div>
+        </div>
+      }
+      </div>
+
+      @if (isLoading) {
+        <div class="message-wrapper bot">
+          <div class="message-bubble typing">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="chat-footer">
+      <input type="text" [(ngModel)]="currentInput" (keyup.enter)="sendMessage()" placeholder="Frag mich etwas..." [disabled]="isLoading">
+      <button class="send-btn" (click)="sendMessage()" [disabled]="!currentInput.trim() || isLoading">➤</button>
+    </div>
+
+  </div>
+}

@@ -4,6 +4,7 @@ import { RegisterComponent } from './register/register';
 import { DashboardComponent } from './dashboard/dashboard';
 import { authGuard } from './auth-guard';
 import { AddContractComponent } from './contract/add-contract/add-contract';
+import { AssistantComponent } from './assistant/assistant';
 
 
 export const routes: Routes = [
@@ -11,5 +12,6 @@ export const routes: Routes = [
   {path: 'register', component: RegisterComponent },
   {path: 'dashboard', component: DashboardComponent, canActivate: [authGuard]},
   {path: 'add-contract', component: AddContractComponent, canActivate: [authGuard] },
+  {path: 'chat', component: AssistantComponent, canActivate: [authGuard] },
   {path:'', redirectTo: 'dashboard', pathMatch: 'full'},
 ];

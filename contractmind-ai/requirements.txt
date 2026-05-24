@@ -1,0 +1,9 @@
+pdfplumber==0.10.3
+openai==1.3.5
+python-dotenv==1.0.0
+pydantic==2.5.2
+fastapi==0.110.1
+uvicorn==0.29.0
+python-multipart==0.0.9
+haystack-ai==2.0.1
+ollama-haystack==0.0.8

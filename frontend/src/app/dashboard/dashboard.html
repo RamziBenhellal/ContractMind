@@ -1,156 +1,175 @@
-<div class="dashboard-layout">
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="logo">ContractMind</div>
-    <nav>
-      <a href="#" class="active">📊 Übersicht</a>
-      <a href="/add-contract">📄 Vertrag hinfügen </a>
-      <a href="#">📄 Meine Verträge</a>
-      <a href="#">🌟 Wunsch-Planer</a>
-      <a href="#">⚙️ Einstellungen</a>
-    </nav>
-    <button class="logout-btn" (click)="logout()">🚪 Logout</button>
-  </aside>
-<!-- HAUPTINHALT -->
-  <main class="main-content">
-    <header class="topbar">
-      <h1>{{ email }}! 👋</h1>
-      <p>Hier ist dein aktueller Finanz-Überblick.</p>
-    </header>
+<div class="dashboard-container">
 
-    <!-- KENNZAHLEN (Cards) -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <h3>Fixkosten / Monat</h3>
-        <!-- FIX 1: number Pipe statt currency für 100% Stabilität -->
-        <p class="highlight-number">{{ totalCost | number:'1.2-2' }} €</p>
-      </div>
-      <div class="stat-card">
-        <h3>Aktive Verträge</h3>
-        <!-- FIX 2: Das Fragezeichen (?) verhindert Abstürze beim Laden -->
-        <p class="highlight-number">{{ contracts.length }}</p>
-      </div>
-      <div class="stat-card">
-        <h3>Nächste Kündigungsfrist</h3>
+  <!-- Der Header-Bereich als Glas-Panel -->
+  <div class="glass-panel header-panel">
+    <h2>Deine Vertragsübersicht</h2>
+    <p>Hier hast du all deine laufenden Kosten transparent im Blick.</p>
+  </div>
+  <div class="stats-row">
 
+    <!-- 1. Gesamtkosten Karte -->
+    <div class="glass-panel stat-card">
+      <div class="stat-icon money-icon">💶</div>
+      <div class="stat-info">
+        <span class="stat-label">Gesamtkosten (monatlich)</span>
+        <span class="stat-value">{{ totalCost }} €</span>
+      </div>
+    </div>
+
+    <!-- 2. Nächste Kündigungsfrist Karte -->
+    <div class="glass-panel stat-card">
+      <div class="stat-icon deadline-icon">⏳</div>
+      <div class="stat-info">
+        <span class="stat-label">Nächste Kündigungsfrist</span>
         @if (nextDeadlineContract) {
-          <p class="highlight-warning" style="color: #e74c3c; font-weight: bold; font-size: 20px;">
-            {{ nextDeadlineContract.endDate | date:'dd.MM.yyyy' }}
-          </p>
-          <p style="margin-top: 5px; color: #555; font-size: 14px;">
-            bei <strong>{{ nextDeadlineContract.provider }}</strong>
-          </p>
+          <span class="stat-value deadline-value">{{ nextDeadlineContract.provider }}</span>
+          <span class="stat-subtext">Am: <strong>{{ nextDeadlineContract.endDate }}</strong></span>
         } @else {
-          <p class="highlight-warning" style="color: #27ae60; font-size: 16px;">
-            🎉 Keine Fristen in Sicht
-          </p>
+          <span class="stat-value no-deadline">Keine in Sicht</span>
+          <span class="stat-subtext">Alles entspannt!</span>
         }
       </div>
     </div>
 
-    <!-- VERTRAGS-TABELLE -->
-    <div class="content-section">
-      <h2>Letzte Verträge</h2>
+  </div>
 
-      <!-- FIX 3: contracts?.length mit Fragezeichen -->
-<table class="contract-table" *ngIf="contracts.length > 0; else noContracts">
-          <thead>
-        <tr>
-          <th>Anbieter</th>
-          <th>Kategorie</th>
-          <th>Monatliche Kosten</th>
-          <th>Laufzeit bis</th>
-          <th>Aktion</th> <!-- 🆕 NEUE SPALTE -->
-        </tr>
-        </thead>
-        <tbody>
-        <tr *ngFor="let contract of contracts">
-          <td>
-            <strong>{{ contract.provider }}</strong>
-            <span *ngIf="contract.status === 'WAITING_FOR_AI'" class="badge badge-ai">⚙️ KI analysiert...</span>
-            <span *ngIf="contract.status === 'NEEDS_REVIEW'" class="badge badge-review">⚠️ Prüfung ausstehend</span>
-            <span *ngIf="contract.status === 'VERIFIED'" class="badge badge-verified">✅ Bestätigt</span>
-          </td>
-          <td>{{ contract.contractType }}</td>
-          <td>{{ contract.monthlyCost | number:'1.2-2' }} €</td>
-          <td>
-            @if (contract.endDate === '2099-12-31') {
-              <span style="color: #888; font-style: italic;">unbefristet</span>
+  <!-- Das Grid für die Vertragskarten -->
+  <div class="cards-grid">
+
+    <!-- Die Schleife, die deine Verträge rendert -->
+    @for (contract of contracts; track contract.id) {
+      <div class="glass-panel contract-card">
+
+        <div class="card-header">
+          <div class="header-badges">
+            @if (contract.status === 'WAITING_FOR_AI') {
+              <span class="status-badge ai-badge">
+              <span class="spin-icon">⚙️</span> KI analysiert...
+            </span>
+            } @else if (contract.status === 'NEEDS_REVIEW') {
+              <span class="status-badge review-badge">
+              <span class="status-dot warning"></span>  Prüfung ausstehend
+            </span>
+            } @else if (contract.status === 'VERIFIED') {
+              <span class="status-badge verified-badge">
+              <span class="status-dot success"></span>  Aktiv
+            </span>
+            } @else if (contract.status === 'AI_ERROR') {
+              <!-- 🆕 Der neue Fehler-Status -->
+              <span class="status-badge error-badge">
+              <span class="status-dot danger"></span>  KI-Fehler
+            </span>
+            }
+
+          </div>
+          <span class="cost">{{ contract.monthlyCost }} €</span>
+        </div>
+
+        <div class="card-body">
+          <h3>{{ contract.provider }}</h3>
+          <p>⏳ Endet am: <strong>
+            @if (contract.endDate === '2099-12-31')
+            {
+              unbefristet
             } @else if (contract.endDate) {
-              <!-- Bonus: Das | date wandelt 2024-10-01 in 01.10.2024 um! -->
-              {{ contract.endDate | date:'dd.MM.yyyy' }}
+            {{ contract.endDate }}
             } @else {
               -
             }
-          </td>
+          </strong></p>
+          <span class="premium-category-badge">
+  🏷️ {{ contract.contractType }}
+</span>
+        </div>
 
-          <!-- 🆕 NEUER BUTTON -->
-          <td>
-            <button *ngIf="contract.status === 'NEEDS_REVIEW'"
-                    (click)="openReviewModal(contract)"
-                    style="background: #f2a900; color: #1a2a6c; padding: 5px 10px; font-size: 12px;">
+        <div class="card-actions">
+          @if (contract.status === 'NEEDS_REVIEW') {
+            <button class="glass-btn review-btn" (click)="openEditModal(contract)">
               🔍 Daten prüfen
             </button>
-            <button *ngIf="contract.status === 'VERIFIED'"
-                    (click)="openReviewModal(contract)"
-                    style="background: transparent; border: 1px solid #ccc; color: #333; padding: 5px 10px; font-size: 12px;">
-              ✏️ Bearbeiten
-            </button>
-            <button (click)="deleteContract(contract.id, contract.provider)"
-                    style="background: transparent; border: 1px solid #e74c3c; color: #e74c3c; padding: 5px 10px; font-size: 12px; margin-left: 5px;">
-              🗑️
-            </button>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+          }
+          <!-- Zwei moderne Buttons nebeneinander -->
+          <button class="glass-btn edit-btn" (click)="openEditModal(contract)">✏️ Bearbeiten</button>
+          <button class="glass-btn delete-btn" (click)="openDeleteModal(contract)">🗑️ Löschen</button>        </div>
 
-      <!-- WENN KEINE VERTRÄGE DA SIND -->
-      <ng-template #noContracts>
-        <div style="text-align: center; padding: 30px; color: #888;">
-          <p>📄 Du hast noch keine Verträge hinzugefügt oder sie laden noch.</p>
-        </div>
-      </ng-template>
-    </div>
-  </main>
-  <div class="modal-overlay" *ngIf="contractToReview">
-  <div class="modal-content">
-    <h2>📝 Vertrag überprüfen</h2>
-    <p>Bitte prüfe die Daten, die unsere KI aus dem Dokument ausgelesen hat.</p>
-
-    <form (ngSubmit)="saveContractReview()">
-      <div class="form-group">
-        <label>Anbieter</label>
-        <input type="text" [(ngModel)]="contractToReview.provider" name="provider" required>
       </div>
+    }
 
-      <div class="form-group">
-        <label>Kategorie</label>
-        <input type="text" [(ngModel)]="contractToReview.contractType" name="contractType" required>
-      </div>
-
-      <div class="form-group">
-        <label>Monatliche Kosten (€)</label>
-        <input type="number" step="0.01" [(ngModel)]="contractToReview.monthlyCost" name="monthlyCost" required>
-      </div>
-      <div class="form-group">
-        <label>Vertragsende</label>
-        <input type="date" [(ngModel)]="contractToReview.endDate" name="endDate">
-        <!-- 🆕 Kleiner Hinweis für den Nutzer -->
-        <small style="color: #666; font-size: 11px;">*Für unbefristete Verträge wähle das Jahr 2099.</small>
-      </div>
-
-
-
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button type="submit" [disabled]="isSaving" style="background: #1a2a6c; color: white; flex: 1;">
-          {{ isSaving ? 'Speichert...' : '✅ Bestätigen & Speichern' }}
-        </button>
-        <button type="button" (click)="closeReviewModal()" style="background: transparent; color: #888; border: 1px solid #ccc; flex: 1;">
-          Abbrechen
-        </button>
-      </div>
-    </form>
   </div>
 </div>
-</div>
+<!-- 🆕 Das Premium Bearbeitungs-Modal -->
+@if (isEditModalOpen && selectedContract) {
+  <!-- Der dunkle, unscharfe Hintergrund -->
+  <div class="modal-backdrop" (click)="closeEditModal()">
+
+    <!-- Das eigentliche Glas-Fenster (stoppt den Klick, damit es sich nicht schließt, wenn man ins Fenster klickt) -->
+    <div class="modal-content glass-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <h3>✏️ Vertrag anpassen</h3>
+        <button class="close-modal-btn" (click)="closeEditModal()">✖</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Anbieter</label>
+          <input type="text" [(ngModel)]="selectedContract.provider" class="modern-input">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group half-width">
+            <label>Kategorie</label>
+            <input type="text" [(ngModel)]="selectedContract.contractType" class="modern-input">
+          </div>
+          <div class="form-group half-width">
+            <label>Kosten (€)</label>
+            <input type="number" [(ngModel)]="selectedContract.monthlyCost" class="modern-input">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Vertragsende</label>
+          <input type="date" [(ngModel)]="selectedContract.endDate" class="modern-input">
+          <small style="color: #666; font-size: 11px;">*Für unbefristete Verträge wähle das Jahr 2099.</small>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="glass-btn cancel-btn" (click)="closeEditModal()">Abbrechen</button>
+        <button class="premium-save-btn" (click)="saveContract()">💾 Speichern</button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- 🆕 Das Premium Lösch-Bestätigungs-Modal -->
+@if (isDeleteModalOpen && contractToDelete) {
+  <div class="modal-backdrop" (click)="closeDeleteModal()">
+
+    <div class="modal-content glass-panel text-center" (click)="$event.stopPropagation()">
+
+      <div class="modal-header warning-header">
+        <h3>⚠️ Vertrag löschen</h3>
+        <button class="close-modal-btn" (click)="closeDeleteModal()">✖</button>
+      </div>
+
+      <div class="modal-body warning-body">
+        <div class="warning-icon-large">🗑️</div>
+        <h4>Bist du dir absolut sicher?</h4>
+        <p>Möchtest du den Vertrag mit <strong>{{ contractToDelete.provider }}</strong> wirklich endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="glass-btn cancel-btn" (click)="closeDeleteModal()">Abbrechen</button>
+        <button class="premium-delete-confirm-btn" (click)="confirmDelete()" [disabled]="isDeleting">
+          @if (isDeleting) {
+            <span class="spin-icon">⏳</span> Wird gelöscht...
+          } @else {
+            Ja, endgültig löschen
+          }
+        </button>      </div>
+
+    </div>
+  </div>
+}

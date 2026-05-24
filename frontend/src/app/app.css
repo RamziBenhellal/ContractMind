@@ -1,28 +1,31 @@
-/* Die Navigation Bar */
+/* Die neue Glas-Navigation Bar */
 .global-navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #1a2a6c; /* Unser dunkles Blau */
   padding: 0 30px;
   height: 70px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 
-  /* Damit das Menü beim Scrollen immer oben bleibt: */
+  /* Der Glas-Effekt direkt auf der Navbar */
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
-/* Das Logo / Der Titel */
+/* Das Logo / Der Titel - jetzt dunkel statt weiß, da der Hintergrund hell ist */
 .nav-brand {
-  color: white;
+  color: #1a2a6c;
   font-size: 24px;
-  font-weight: bold;
+  font-weight: 800;
   letter-spacing: 1px;
 }
 
-/* Die Liste mit den Links */
 .nav-links {
   display: flex;
   list-style: none;
@@ -31,48 +34,49 @@
   padding: 0;
 }
 
-/* Wie die Links aussehen */
+/* Die Links an den neuen Stil anpassen */
 .nav-links a {
-  color: #aeb8d6;
+  color: #4a5568;
   text-decoration: none;
   font-size: 16px;
-  font-weight: 500;
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
-/* Wenn man mit der Maus drüber fährt */
 .nav-links a:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.5);
+  color: #1a2a6c;
+  transform: translateY(-2px);
 }
 
-/* Wenn man sich gerade auf dieser Seite befindet! */
 .nav-links a.active-link {
-  color: white;
-  background-color: #f2a900; /* Unser Warn-Orange/Gelb */
+  background: rgba(255, 255, 255, 0.8);
+  color: #1a2a6c;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-/* Der Logout Button */
+/* Der Logout Button im Glas-Look */
 .logout-btn {
-  background: transparent;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  padding: 8px 15px;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.4);
+  color: #1a2a6c;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .logout-btn:hover {
   background: white;
-  color: #1a2a6c;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
 }
 
-/* Damit die Seiten (Dashboard, Upload) nicht am Menü kleben */
 .main-content {
   padding: 30px;
   max-width: 1200px;
-  margin: 0 auto; /* Zentriert den Inhalt */
+  margin: 0 auto;
 }

@@ -29,6 +29,10 @@ export class DashboardComponent implements OnInit {
   contractToReview: Contract | null = null
   isSaving: boolean = false;
 
+  isDeleteModalOpen = false;
+  contractToDelete: any = null;
+  isDeleting = false;
+
   ngOnInit(){
     this.loadMyContracts()
   }
@@ -125,7 +129,98 @@ export class DashboardComponent implements OnInit {
         })
       }
     }
+  isEditModalOpen = false;
+  selectedContract: any = null;
 
+  // Methoden für das Pop-up
+  openEditModal(contract: any) {
+    // Wir machen eine Kopie des Vertrags, damit Änderungen erst beim "Speichern" übernommen werden
+    this.selectedContract = { ...contract };
+    this.isEditModalOpen = true;
+  }
+
+  closeEditModal() {
+    this.isEditModalOpen = false;
+    this.selectedContract = null;
+  }
+
+
+  saveContract() {
+    if (!this.selectedContract) return;
+
+    // 1. Lade-Animation starten und Status auf VERIFIED setzen
+    this.isSaving = true;
+    this.selectedContract.status = 'VERIFIED';
+
+    // 2. Den PUT-Request an das Spring Boot Backend senden
+    this.contractService.updateContract(this.selectedContract.id, this.selectedContract).subscribe({
+      next: (updatedContract) => {
+        // Erfolgsfall: Das Backend schickt den aktualisierten Vertrag zurück
+
+        // 3. Den Vertrag im lokalen Array durch den vom Server ersetzen
+        const index = this.contracts.findIndex(c => c.id === updatedContract.id);
+        if (index !== -1) {
+          this.contracts[index] = updatedContract;
+        }
+
+        // 4. Statistiken (Gesamtkosten etc.) neu berechnen
+        this.calculateTotalCost();
+        this.findNextDeadline();
+
+        // 5. Pop-up schließen und Ladezustand beenden
+        this.isSaving = false;
+        this.closeEditModal();
+
+        // 🚨 Angular zwingen, das UI sofort zu aktualisieren
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Fehler beim Aktualisieren des Vertrags:', err);
+
+        // Im Fehlerfall: Ladezustand beenden, aber Modal offen lassen,
+        // damit der Nutzer die Daten korrigieren kann.
+        this.isSaving = false;
+        this.cdr.detectChanges();
+
+        alert('Huch! Die Änderungen konnten nicht gespeichert werden. Server-Verbindung prüfen.');
+      }
+    });
+  }
+
+  openDeleteModal(contract: any) {
+    this.contractToDelete = contract;
+    this.isDeleteModalOpen = true;
+  }
+
+  closeDeleteModal() {
+    this.isDeleteModalOpen = false;
+    this.contractToDelete = null;
+  }
+
+  confirmDelete() {
+    if (!this.contractToDelete) return;
+    this.isDeleting = true;
+    this.contractService.deleteContract(this.contractToDelete.id).subscribe({
+
+      next: () => {
+        this.contracts = this.contracts.filter(c => c.id !== this.contractToDelete.id);
+        this.calculateTotalCost();
+        this.findNextDeadline();
+        this.isDeleting = false;
+        this.closeDeleteModal();
+        this.cdr.detectChanges();
+      },
+
+      error: (err) => {
+        console.error('Fehler beim Löschen des Vertrags:', err);
+        this.isDeleting = false;
+        this.closeDeleteModal();
+        this.cdr.detectChanges();
+
+        alert('Huch! Der Vertrag konnte nicht gelöscht werden. Bitte versuche es später noch einmal.');
+      }
+    });
+  }
 
   logout(){
     this.authService.logout();

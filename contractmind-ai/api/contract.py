@@ -28,6 +28,7 @@ async def analyze_contract(file: UploadFile = File(...)):
                 text = page.extract_text()
                 if text:
                     extracted_text += text + "\n"
+                    print(extracted_text)
 
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Das PDF ist leer oder ein reines Bild.")

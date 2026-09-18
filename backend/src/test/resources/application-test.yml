@@ -23,6 +23,10 @@ gocardless:
 
 ai-service:
   url: http://localhost:9
+  timeout-ms: 500
+  retry:
+    max-attempts: 2
+    backoff-ms: 50
 
 fints:
   service:

@@ -69,6 +69,10 @@ public class BankTransaction {
     @Builder.Default
     private ClassificationStatus classificationStatus = ClassificationStatus.PENDING;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean suggestNewContract = false;
+
     @PrePersist
     void onCreate() {
         if (currency == null || currency.isBlank()) {

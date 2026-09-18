@@ -16,4 +16,8 @@ public interface BankCalendarEntryRepository extends JpaRepository<BankCalendarE
     List<BankCalendarEntry> findByUser_IdAndType(Long userId, CalendarEntryType type);
 
     List<BankCalendarEntry> findByUser_IdAndExpectedDateBetween(Long userId, LocalDate from, LocalDate to);
+
+    boolean existsBySourceContract_Id(Long contractId);
+
+    boolean existsBySourceIncome_Id(Long incomeId);
 }

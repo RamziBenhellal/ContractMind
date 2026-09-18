@@ -27,6 +27,10 @@ contractmind:
 # Custom Settings für den KI-Service
 ai-service:
   url: http://localhost:8000
+  timeout-ms: 3000
+  retry:
+    max-attempts: 2
+    backoff-ms: 200
 
 # GoCardless API Credentials
 gocardless:

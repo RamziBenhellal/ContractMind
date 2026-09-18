@@ -31,6 +31,9 @@ public class BankAccountService {
         BankAccount newBankAccount = new BankAccount();
         newBankAccount.setAccountName(bankAccountDto.getAccountName());
         newBankAccount.setBankName(bankAccountDto.getBankName());
+        newBankAccount.setIban(bankAccountDto.getIban());
+        newBankAccount.setAccountType(bankAccountDto.getAccountType());
+        newBankAccount.setBalance(bankAccountDto.getBalance());
         newBankAccount.setUser(user);
 
         BankAccount bankAccount = bankAccountRepository.save(newBankAccount);
@@ -42,6 +45,13 @@ public class BankAccountService {
                 .orElseThrow(() -> new RuntimeException("BankAccount not found"));
         bankAccount.setAccountName(bankAccountDto.getAccountName());
         bankAccount.setBankName(bankAccountDto.getBankName());
+        bankAccount.setIban(bankAccountDto.getIban());
+        if (bankAccountDto.getAccountType() != null) {
+            bankAccount.setAccountType(bankAccountDto.getAccountType());
+        }
+        if (bankAccountDto.getBalance() != null) {
+            bankAccount.setBalance(bankAccountDto.getBalance());
+        }
 
         BankAccount savedBankAccount = bankAccountRepository.save(bankAccount);
         return mapToBankAccountDto(savedBankAccount);
@@ -63,6 +73,10 @@ public class BankAccountService {
                 .id(bankAccount.getId())
                 .accountName(bankAccount.getAccountName())
                 .bankName(bankAccount.getBankName())
+                .iban(bankAccount.getIban())
+                .accountType(bankAccount.getAccountType())
+                .balance(bankAccount.getBalance())
+                .lastSyncedAt(bankAccount.getLastSyncedAt())
                 .balanceHistory(bankAccount.getBalanceHistory())
                 .build();
     }

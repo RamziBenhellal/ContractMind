@@ -29,23 +29,56 @@ public class BankTransaction {
     @Column(name = "external_id", nullable = false)
     private String externalId;
 
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal amount;
+
+    @Column(length = 3, nullable = false)
+    @Builder.Default
+    private String currency = "EUR";
+
     @Column(nullable = false)
     private LocalDate bookingDate;
 
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal amount;
+    private LocalDate valueDate;
 
     @Column(columnDefinition = "TEXT")
     private String purpose;
 
-    private String counterpartName;
-    private String counterpartIban;
+    private String counterpartyName;
+    private String counterpartyIban;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private TransactionClassification classification = TransactionClassification.UNCLASSIFIED;
+
+    private Double confidenceScore;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "linked_contract_id")
+    private Contract linkedContract;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "linked_income_id")
+    private Income linkedIncome;
+
+    private String category;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private ClassificationStatus classificationStatus = ClassificationStatus.PENDING;
 
-    /** Wird in Phase 3 vom Klassifikator gesetzt */
-    private String category;
+    @PrePersist
+    void onCreate() {
+        if (currency == null || currency.isBlank()) {
+            currency = "EUR";
+        }
+        if (classification == null) {
+            classification = TransactionClassification.UNCLASSIFIED;
+        }
+        if (classificationStatus == null) {
+            classificationStatus = ClassificationStatus.PENDING;
+        }
+    }
 }

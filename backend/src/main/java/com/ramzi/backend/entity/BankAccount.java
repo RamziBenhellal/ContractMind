@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +33,15 @@ public class BankAccount {
     @Column(length = 34)
     private String iban;
 
-    private String accountType;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AccountType accountType = AccountType.GIROKONTO;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal balance;
+
+    private Instant lastSyncedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bank_connection_id")
@@ -51,4 +60,11 @@ public class BankAccount {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @PrePersist
+    void onCreate() {
+        if (accountType == null) {
+            accountType = AccountType.GIROKONTO;
+        }
+    }
 }

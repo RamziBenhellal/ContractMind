@@ -105,7 +105,7 @@ public class BankConnectionOrchestrationService {
             BankAccount persisted = upsertBankAccount(connection, remote);
             result.add(new ConnectedAccountDto(
                     persisted.getIban(),
-                    persisted.getAccountType(),
+                    remote.accountType(),
                     currentBalance(persisted, remote.balance())
             ));
         }
@@ -169,9 +169,11 @@ public class BankConnectionOrchestrationService {
             BankAccount account = new BankAccount();
             account.setUser(user);
             account.setBankConnection(connection);
-            account.setAccountType(remote.accountType());
+            account.setAccountType(AccountType.fromBankLabel(remote.accountType()));
             account.setBankName(firstNonBlank(remote.bankName(), connection.getBankName(), connection.getBlz()));
             account.setAccountName(firstNonBlank(remote.accountType(), "Konto"));
+            account.setBalance(remote.balance());
+            account.setLastSyncedAt(Instant.now());
             if (remote.balance() != null) {
                 account.setBalanceHistory(new java.util.HashMap<>());
                 account.getBalanceHistory().put(LocalDate.now(), remote.balance());
@@ -185,9 +187,11 @@ public class BankConnectionOrchestrationService {
         account.setUser(user);
         account.setBankConnection(connection);
         account.setIban(remote.iban());
-        account.setAccountType(remote.accountType());
+        account.setAccountType(AccountType.fromBankLabel(remote.accountType()));
         account.setBankName(firstNonBlank(remote.bankName(), connection.getBankName(), connection.getBlz()));
         account.setAccountName(buildAccountName(remote));
+        account.setBalance(remote.balance());
+        account.setLastSyncedAt(Instant.now());
 
         if (remote.balance() != null) {
             if (account.getBalanceHistory() == null) {
@@ -204,14 +208,18 @@ public class BankConnectionOrchestrationService {
         if (transactionRepository.existsByBankAccountAndExternalId(account, externalId)) {
             return java.util.Optional.empty();
         }
+        LocalDate bookingDate = tx.bookingDate() != null ? tx.bookingDate() : LocalDate.now();
         BankTransaction created = BankTransaction.builder()
                 .bankAccount(account)
                 .externalId(externalId)
-                .bookingDate(tx.bookingDate() != null ? tx.bookingDate() : LocalDate.now())
+                .bookingDate(bookingDate)
+                .valueDate(bookingDate)
                 .amount(tx.amount() != null ? tx.amount() : BigDecimal.ZERO)
+                .currency("EUR")
                 .purpose(tx.purpose())
-                .counterpartName(tx.counterpartName())
-                .counterpartIban(tx.counterpartIban())
+                .counterpartyName(tx.counterpartName())
+                .counterpartyIban(tx.counterpartIban())
+                .classification(TransactionClassification.UNCLASSIFIED)
                 .classificationStatus(ClassificationStatus.PENDING)
                 .build();
         return java.util.Optional.of(transactionRepository.save(created));
@@ -244,6 +252,9 @@ public class BankConnectionOrchestrationService {
     }
 
     private static BigDecimal currentBalance(BankAccount account, BigDecimal fallback) {
+        if (account.getBalance() != null) {
+            return account.getBalance();
+        }
         if (account.getBalanceHistory() != null && !account.getBalanceHistory().isEmpty()) {
             return account.getBalanceHistory().getOrDefault(LocalDate.now(), fallback);
         }

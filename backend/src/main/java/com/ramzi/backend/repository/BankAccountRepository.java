@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface BankAccountRepository extends JpaRepository<BankAccount, Long> {
     List<BankAccount> findByUser_Email(String email);
 
+    List<BankAccount> findByUser_Id(Long userId);
+
     Optional<BankAccount> findByUser_IdAndIban(Long userId, String iban);
 }

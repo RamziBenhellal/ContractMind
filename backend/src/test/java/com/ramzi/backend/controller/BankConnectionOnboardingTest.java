@@ -1,10 +1,12 @@
 package com.ramzi.backend.controller;
 
+import com.ramzi.backend.entity.AccountType;
 import com.ramzi.backend.entity.BankAccount;
 import com.ramzi.backend.entity.BankConnection;
 import com.ramzi.backend.entity.BankConnectionStatus;
 import com.ramzi.backend.entity.BankTransaction;
 import com.ramzi.backend.entity.ClassificationStatus;
+import com.ramzi.backend.entity.TransactionClassification;
 import com.ramzi.backend.entity.User;
 import com.ramzi.backend.exception.BankConnectionException;
 import com.ramzi.backend.repository.BankAccountRepository;
@@ -141,7 +143,8 @@ class BankConnectionOnboardingTest {
         BankAccount account = accounts.get(0);
         assertThat(account.getIban()).isEqualTo("DE89370400440532013000");
         assertThat(account.getBankName()).isEqualTo("Frankfurter Sparkasse");
-        assertThat(account.getAccountType()).isEqualTo("Girokonto");
+        assertThat(account.getAccountType()).isEqualTo(AccountType.GIROKONTO);
+        assertThat(account.getBalance()).isEqualByComparingTo("1420.50");
     }
 
     @Test
@@ -248,6 +251,9 @@ class BankConnectionOnboardingTest {
         assertThat(tx.getExternalId()).isEqualTo("tx-1");
         assertThat(tx.getAmount()).isEqualByComparingTo("-12.50");
         assertThat(tx.getPurpose()).isEqualTo("Netflix");
+        assertThat(tx.getCounterpartyName()).isEqualTo("Netflix International");
+        assertThat(tx.getCurrency()).isEqualTo("EUR");
+        assertThat(tx.getClassification()).isEqualTo(TransactionClassification.UNCLASSIFIED);
         assertThat(tx.getClassificationStatus()).isEqualTo(ClassificationStatus.PENDING);
     }
 

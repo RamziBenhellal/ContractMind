@@ -5,6 +5,7 @@ import com.ramzi.backend.entity.TransactionClassification;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class TransactionFeedbackDto {
 
@@ -35,6 +36,7 @@ public class TransactionFeedbackDto {
             String purpose,
             String counterpartyName,
             String counterpartyIban,
+            LocalDate bookingDate,
             TransactionClassification classification,
             Double confidenceScore,
             boolean suggestNewContract

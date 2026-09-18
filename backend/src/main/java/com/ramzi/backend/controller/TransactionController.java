@@ -50,6 +50,7 @@ public class TransactionController {
                         tx.getPurpose(),
                         tx.getCounterpartyName(),
                         tx.getCounterpartyIban(),
+                        tx.getBookingDate(),
                         tx.getClassification(),
                         tx.getConfidenceScore(),
                         tx.isSuggestNewContract()

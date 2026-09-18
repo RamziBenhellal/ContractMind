@@ -1,0 +1,145 @@
+.review-wrapper {
+  padding: 30px;
+  margin-top: 30px;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.review-header h2 {
+  margin: 0 0 6px;
+  color: #1a2a6c;
+}
+
+.review-header p,
+.meta,
+.empty-state {
+  color: #4a5568;
+  margin: 0;
+}
+
+.queue-badge {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: #1a2a6c;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.review-list {
+  display: grid;
+  gap: 18px;
+}
+
+.review-card {
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.card-top h3 {
+  margin: 0 0 4px;
+  color: #1a2a6c;
+}
+
+.amount {
+  font-weight: 800;
+  color: #c53030;
+  white-space: nowrap;
+}
+
+.amount.income {
+  color: #2f855a;
+}
+
+.hint {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff6d6;
+  color: #975a16;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.action-block {
+  margin-top: 14px;
+}
+
+.action-block label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1a2a6c;
+  text-transform: uppercase;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.action-row .ultra-modern-input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.new-entity-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.kind-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-btn {
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle-btn.active {
+  background: #1a2a6c;
+  color: white;
+}
+
+.glass-btn {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.error-glass-box,
+.empty-state {
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.4);
+}

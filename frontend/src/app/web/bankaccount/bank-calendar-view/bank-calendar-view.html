@@ -1,0 +1,50 @@
+<div class="glass-panel calendar-wrapper">
+  <div class="available-banner" data-testid="available-balance">
+    <div>
+      <p class="banner-label">Verfügbares Einkommen bis Monatsende</p>
+      <h2>{{ available()?.availableBalance ?? 0 | number:'1.2-2' }} €</h2>
+    </div>
+    <div class="banner-meta">
+      <span>Kontostand {{ available()?.currentBalance ?? 0 | number:'1.2-2' }} €</span>
+      <span class="income">+ {{ available()?.expectedIncome ?? 0 | number:'1.2-2' }} €</span>
+      <span class="charge">− {{ available()?.outstandingCharges ?? 0 | number:'1.2-2' }} €</span>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="error-glass-box">{{ error() }}</div>
+  }
+
+  <div class="month-navigation">
+    <button class="nav-btn" (click)="changeMonth(-1)">❮ Letzter</button>
+    <h2>{{ monthNames[currentMonth] }} {{ currentYear }}</h2>
+    <button class="nav-btn" (click)="changeMonth(1)">Nächster ❯</button>
+  </div>
+
+  <div class="calendar-grid" data-testid="calendar-grid">
+    @for (day of weekDays; track day) {
+      <div class="weekday-header">{{ day }}</div>
+    }
+
+    @for (day of calendarGrid; track day.dateString) {
+      <div class="calendar-cell" [class.not-current-month]="!day.isCurrentMonth">
+        <div class="cell-header">
+          <span class="day-number">{{ day.dayOfMonth }}</span>
+        </div>
+        <div class="entry-list">
+          @for (entry of day.entries; track entry.sourceEntryId + '-' + entry.title) {
+            <div
+              class="entry-chip"
+              [class.income]="entry.type === 'INCOME'"
+              [class.charge]="entry.type === 'CONTRACT_PAYMENT'"
+              [class.occurred]="entry.occurred"
+              [attr.data-testid]="'entry-' + entry.title">
+              <span>{{ entry.title }}</span>
+              <strong>{{ entry.amount | number:'1.2-2' }} €</strong>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

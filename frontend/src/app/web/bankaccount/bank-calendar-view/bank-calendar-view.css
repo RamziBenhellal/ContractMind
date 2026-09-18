@@ -1,0 +1,122 @@
+.calendar-wrapper {
+  padding: 30px;
+  margin-top: 30px;
+}
+
+.available-banner {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(26, 42, 108, 0.9), rgba(42, 72, 184, 0.85));
+  color: white;
+}
+
+.banner-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  opacity: 0.85;
+}
+
+.available-banner h2 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.banner-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.banner-meta .income { color: #9ae6b4; }
+.banner-meta .charge { color: #feb2b2; }
+
+.month-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.month-navigation h2 {
+  color: #1a2a6c;
+  margin: 0;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+}
+
+.weekday-header {
+  text-align: center;
+  font-weight: 800;
+  color: #4a5568;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.calendar-cell {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 120px;
+}
+
+.not-current-month {
+  opacity: 0.45;
+}
+
+.day-number {
+  font-weight: 800;
+  color: #1a2a6c;
+}
+
+.entry-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.entry-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.entry-chip.charge {
+  background: rgba(229, 62, 62, 0.14);
+  color: #c53030;
+}
+
+.entry-chip.income {
+  background: rgba(47, 133, 90, 0.14);
+  color: #276749;
+}
+
+.entry-chip.occurred {
+  opacity: 0.65;
+  text-decoration: line-through;
+}

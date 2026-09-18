@@ -28,6 +28,7 @@ export class App {
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/chat', label: 'Assistant', icon: '✨' },
     { path: '/bank-calendar', label: 'Bank-Kalender', icon: '🏦' },
+    { path: '/transaction-review', label: 'Umsätze prüfen', icon: '✅' },
     { path: '/bank-connect', label: 'Bank verbinden', icon: '🔗' },
     { path: '/add-income', label: 'Neues Einkommen', icon: '💰' },
     { path: '/add-contract', label: 'Neuer Vertrag', icon: '➕' },

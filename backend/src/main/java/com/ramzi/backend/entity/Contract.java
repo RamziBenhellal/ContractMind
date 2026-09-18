@@ -1,8 +1,8 @@
 package com.ramzi.backend.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -30,6 +30,11 @@ public class Contract {
     private LocalDate startDate;
     private LocalDate endDate;
     private LocalDate noticedPeriodDate;
+
+    @Min(value = 1, message = "Der Tag muss mindestens 1 sein")
+    @Max(value = 31, message = "Der Tag darf maximal 31 sein")
+    @Column(name = "due_day_of_month")
+    private Integer dueDayOfMonth;
 
     private String filePath;
 

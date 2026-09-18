@@ -1,0 +1,320 @@
+.wizard {
+  padding: 30px;
+  margin-top: 30px;
+  max-width: 640px;
+}
+
+.wizard-head h2 {
+  margin: 0 0 22px;
+  color: #1a2a6c;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+/* =========================================
+   SCHRITT-ANZEIGE
+   ========================================= */
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.stepper-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.stepper-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #718096;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+}
+
+.stepper-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.is-active .stepper-dot {
+  background: linear-gradient(135deg, #1a2a6c, #2a48b8);
+  color: white;
+  box-shadow: 0 4px 12px rgba(26, 42, 108, 0.3);
+}
+
+.is-active .stepper-label {
+  color: #1a2a6c;
+}
+
+.is-done .stepper-dot {
+  background: rgba(39, 174, 96, 0.18);
+  color: #27ae60;
+  border-color: rgba(39, 174, 96, 0.4);
+}
+
+/* =========================================
+   FEHLERBANNER
+   ========================================= */
+.wizard-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(229, 62, 62, 0.12);
+  border: 1px solid rgba(229, 62, 62, 0.35);
+  color: #c53030;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Bank nicht erreichbar ist kein Nutzerfehler - dezenter darstellen */
+.wizard-error[data-error-code='BANK_UNREACHABLE'] {
+  background: rgba(237, 137, 54, 0.12);
+  border-color: rgba(237, 137, 54, 0.35);
+  color: #c05621;
+}
+
+/* =========================================
+   SCHRITTE
+   ========================================= */
+.wizard-hint {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.chosen-bank {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.chosen-bank strong {
+  color: #1a2a6c;
+}
+
+/* Trefferliste der Banksuche */
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.result-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.result-item:hover {
+  background: white;
+  transform: translateX(3px);
+  box-shadow: 0 4px 15px rgba(31, 38, 135, 0.1);
+}
+
+.result-name {
+  font-weight: 700;
+  color: #1a2a6c;
+  font-size: 15px;
+}
+
+.result-blz {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+  white-space: nowrap;
+}
+
+/* TAN-Verfahren */
+.radio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.radio-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.radio-row.is-selected {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(42, 72, 184, 0.45);
+  box-shadow: 0 4px 15px rgba(31, 38, 135, 0.1);
+}
+
+.radio-row input {
+  margin-top: 3px;
+  accent-color: #2a48b8;
+}
+
+.radio-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.radio-title {
+  font-weight: 700;
+  color: #1a2a6c;
+  font-size: 15px;
+}
+
+.radio-hint {
+  font-size: 12px;
+  color: #718096;
+}
+
+.tan-hint {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(42, 72, 184, 0.08);
+  border: 1px solid rgba(42, 72, 184, 0.2);
+  color: #2d3748;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =========================================
+   ERFOLGSSCREEN
+   ========================================= */
+.success-head {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.success-icon {
+  font-size: 38px;
+}
+
+.success-head h3 {
+  margin: 8px 0 6px;
+  color: #1a2a6c;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.account-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.account-iban {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-weight: 700;
+  color: #1a2a6c;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+.account-type {
+  font-size: 12px;
+  font-weight: 700;
+  color: #718096;
+  text-transform: uppercase;
+}
+
+.account-balance {
+  font-weight: 900;
+  color: #2d3748;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.account-balance.negative {
+  color: #c53030;
+}
+
+/* =========================================
+   AKTIONEN
+   ========================================= */
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.glass-btn {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.glass-btn:hover:not([disabled]) {
+  background: white;
+  transform: translateY(-2px);
+}
+
+.premium-save-btn[disabled],
+.glass-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}

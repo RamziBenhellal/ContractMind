@@ -34,6 +34,18 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Contract> contracts = new ArrayList<>();
 
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Income> incomes = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BankAccount> bankAccounts = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BankConnection> bankConnections = new ArrayList<>();
+
 
     
 }

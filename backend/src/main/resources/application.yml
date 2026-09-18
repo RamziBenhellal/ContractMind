@@ -20,6 +20,25 @@ spring:
 
 contractmind:
   upload-dir: uploads/contracts
+
 # Custom Settings für den KI-Service
 ai-service:
-  url: http://localhost:8000  # Adresse des Python FastAPI Dienstes
+  url: http://localhost:8000
+
+# GoCardless API Credentials
+gocardless:
+  api:
+    url: https://bankaccountdata.gocardless.com/api/v2
+  secret:
+    id: ContractMind
+    key: live_iNfqglAuUXTKAkW7vG7-vMqsMolEJhlvrnZ5yNt9
+
+# Python FinTS-Service + AES-Schlüssel für gespeicherte Zugangsdaten.
+# FINTS_ENCRYPTION_KEY kommt aus der Umgebung oder später aus Vault.
+fints:
+  service:
+    url: ${FINTS_SERVICE_URL:http://localhost:8000}
+  encryption-key: ${FINTS_ENCRYPTION_KEY:dev-only-not-for-production}
+  sync:
+    enabled: true
+    cron: "0 0 */6 * * *"

@@ -1,20 +1,50 @@
 @if (authService.isLoggedIn()) {
-  <nav class="global-navbar glass-panel">
-    <div class="nav-brand">ContractMind</div>
-    <ul class="nav-links">
-      <li><a routerLink="/dashboard" routerLinkActive="active-link">📊 Dashboard</a></li>
-      <li><a routerLink="/chat" routerLinkActive="active-link">✨ Assistant</a></li>
-      <li><a routerLink="/add-contract" routerLinkActive="active-link">➕ Neuer Vertrag</a></li>
-    </ul>
-    <button class="logout-btn" (click)="logout()">Logout</button>
-  </nav>
+  <button
+    class="sidebar-mobile-toggle glass-panel"
+    [class.is-hidden]="mobileOpen()"
+    (click)="toggleMobile()"
+    aria-label="Menü öffnen">☰</button>
 
-  <!-- Das Chat-Widget soll wahrscheinlich auch nur sichtbar sein, wenn eingeloggt -->
+  @if (mobileOpen()) {
+    <div class="sidebar-backdrop" (click)="closeMobile()"></div>
+  }
+
+  <aside class="sidebar glass-panel" [class.collapsed]="collapsed()" [class.mobile-open]="mobileOpen()">
+    <div class="sidebar-head">
+      <span class="nav-brand">ContractMind</span>
+      <button
+        class="collapse-btn"
+        (click)="toggleCollapsed()"
+        [title]="collapsed() ? 'Menü ausklappen' : 'Menü einklappen'"
+        [attr.aria-expanded]="!collapsed()">
+        {{ collapsed() ? '»' : '«' }}
+      </button>
+      <button class="mobile-close-btn" (click)="closeMobile()" aria-label="Menü schließen">✕</button>
+    </div>
+
+    <ul class="nav-links">
+      @for (item of navItems; track item.path) {
+        <li>
+          <a [routerLink]="item.path" routerLinkActive="active-link" [title]="item.label" (click)="closeMobile()">
+            <span class="nav-icon">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+
+    <button class="logout-btn" (click)="logout()" title="Logout">
+      <span class="nav-icon">⏏</span>
+      <span class="nav-label">Logout</span>
+    </button>
+  </aside>
+
   <app-chat></app-chat>
 }
-<main class="main-content">
+
+<main
+  class="main-content"
+  [class.with-sidebar]="authService.isLoggedIn()"
+  [class.sidebar-collapsed]="collapsed()">
   <router-outlet></router-outlet>
 </main>
-@if (authService.isLoggedIn()) {
-<app-chat></app-chat>
-}

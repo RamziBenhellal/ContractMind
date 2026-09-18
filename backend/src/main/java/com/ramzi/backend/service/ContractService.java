@@ -34,6 +34,7 @@ public class ContractService {
                 .monthlyCost(contract.getMonthlyCost())
                 .endDate(contract.getEndDate())
                 .status(contract.getStatus())
+                .dueDayOfMonth(contract.getDueDayOfMonth())
                 .build();
     }
 
@@ -73,6 +74,7 @@ public class ContractService {
         newContract.setContractType(contractDto.getContractType());
         newContract.setMonthlyCost(contractDto.getMonthlyCost());
         newContract.setEndDate(contractDto.getEndDate());
+        newContract.setDueDayOfMonth(contractDto.getDueDayOfMonth());
 
         // Da der Nutzer es selbst eingetippt hat, ist es direkt "bestätigt"
         newContract.setStatus("VERIFIED");
@@ -89,12 +91,11 @@ public class ContractService {
         contract.setContractType(updatedContract.getContractType());
         contract.setMonthlyCost(updatedContract.getMonthlyCost());
         contract.setEndDate(updatedContract.getEndDate());
+        contract.setDueDayOfMonth(updatedContract.getDueDayOfMonth());
         contract.setStatus("VERIFIED");
 
         Contract savedContract =  contractRepository.save(contract);
 
         return mapToDto(savedContract);
     }
-
-
 }

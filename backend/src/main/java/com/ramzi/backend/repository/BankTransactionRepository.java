@@ -6,6 +6,7 @@ import com.ramzi.backend.entity.ClassificationStatus;
 import com.ramzi.backend.entity.TransactionClassification;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,4 +24,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             String email, ClassificationStatus status);
 
     Optional<BankTransaction> findByIdAndBankAccount_User_Email(Long id, String email);
+
+    List<BankTransaction> findByBankAccount_User_IdAndBookingDateBetween(
+            Long userId, LocalDate from, LocalDate to);
 }

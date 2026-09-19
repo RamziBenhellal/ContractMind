@@ -47,6 +47,7 @@ fints:
   service:
     url: ${FINTS_SERVICE_URL:http://localhost:8000}
   encryption-key: ${FINTS_ENCRYPTION_KEY:dev-only-not-for-production}
+  internal-token: ${FINTS_INTERNAL_TOKEN:dev-internal}
   sync:
     enabled: true
     cron: "0 0 */6 * * *"

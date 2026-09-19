@@ -21,8 +21,12 @@ public class BankConnectionDto {
 
     public record ConfirmTanRequest(
             String tanMethodId,
-            @NotBlank String tan
+            String tan
     ) {}
+
+    public record SelectTanMethodRequest(@NotBlank String tanMethodId) {}
+
+    public record SelectTanMethodResponse(String hint, boolean decoupled, String challenge) {}
 
     public record ConnectedAccountDto(String iban, String accountType, BigDecimal balance) {}
 }

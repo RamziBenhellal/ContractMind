@@ -24,7 +24,7 @@ public class PythonFinTsClient implements FinTsClient {
     private final WebClient webClient;
 
     public PythonFinTsClient(@Value("${fints.service.url}") String baseUrl) {
-        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(20));
+        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(60));
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
@@ -69,13 +69,30 @@ public class PythonFinTsClient implements FinTsClient {
     }
 
     @Override
+    public FinTsModels.SelectTanResponse selectTanMethod(String sessionId, String tanMethodId) {
+        try {
+            FinTsModels.SelectTanResponse response = webClient.post()
+                    .uri("/fints/sessions/{id}/tan-method", sessionId)
+                    .bodyValue(Map.of("tanMethodId", tanMethodId != null ? tanMethodId : ""))
+                    .retrieve()
+                    .bodyToMono(FinTsModels.SelectTanResponse.class)
+                    .block();
+            return response != null ? response : new FinTsModels.SelectTanResponse(null, false, null);
+        } catch (WebClientRequestException e) {
+            throw BankConnectionException.bankUnreachable();
+        } catch (WebClientResponseException e) {
+            throw mapError(e, "TAN_INVALID");
+        }
+    }
+
+    @Override
     public List<FinTsModels.FinTsAccount> confirmTan(String sessionId, String tanMethodId, String tan) {
         try {
             FinTsModels.ConfirmTanResponse response = webClient.post()
                     .uri("/fints/sessions/{id}/confirm-tan", sessionId)
                     .bodyValue(Map.of(
                             "tanMethodId", tanMethodId != null ? tanMethodId : "",
-                            "tan", tan
+                            "tan", tan != null ? tan : ""
                     ))
                     .retrieve()
                     .bodyToMono(FinTsModels.ConfirmTanResponse.class)
@@ -109,18 +126,20 @@ public class PythonFinTsClient implements FinTsClient {
     }
 
     private BankConnectionException mapError(WebClientResponseException e, String fallbackCode) {
-        String bodyCode = readBodyCode(e.getResponseBodyAsString());
+        String body = e.getResponseBodyAsString();
+        String bodyCode = readBodyCode(body);
+        String bodyMessage = readBodyMessage(body);
         if ("INVALID_PIN".equals(bodyCode)) return BankConnectionException.invalidPin();
         if ("TAN_INVALID".equals(bodyCode)) return BankConnectionException.tanInvalid();
         if ("TAN_EXPIRED".equals(bodyCode)) return BankConnectionException.tanExpired();
-        if ("BANK_UNREACHABLE".equals(bodyCode)) return BankConnectionException.bankUnreachable();
+        if ("BANK_UNREACHABLE".equals(bodyCode)) return BankConnectionException.bankUnreachable(bodyMessage);
         if ("SEARCH_FAILED".equals(bodyCode)) return BankConnectionException.searchFailed();
 
         HttpStatusCode status = e.getStatusCode();
         if (status.value() == 401 || status.value() == 403) return BankConnectionException.invalidPin();
         if (status.value() == 410) return BankConnectionException.tanExpired();
         if (status.value() == 502 || status.value() == 503 || status.value() == 504) {
-            return BankConnectionException.bankUnreachable();
+            return BankConnectionException.bankUnreachable(bodyMessage);
         }
         if ("SEARCH_FAILED".equals(fallbackCode)) return BankConnectionException.searchFailed();
         if ("INVALID_PIN".equals(fallbackCode)) return BankConnectionException.invalidPin();
@@ -129,10 +148,18 @@ public class PythonFinTsClient implements FinTsClient {
     }
 
     private static final Pattern BODY_CODE = Pattern.compile("\"code\"\\s*:\\s*\"([A-Z_]+)\"");
+    private static final Pattern BODY_MESSAGE = Pattern.compile("\"message\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
 
     private String readBodyCode(String body) {
         if (body == null || body.isBlank()) return null;
         Matcher matcher = BODY_CODE.matcher(body);
         return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String readBodyMessage(String body) {
+        if (body == null || body.isBlank()) return null;
+        Matcher matcher = BODY_MESSAGE.matcher(body);
+        if (!matcher.find()) return null;
+        return matcher.group(1).replace("\\\"", "\"");
     }
 }

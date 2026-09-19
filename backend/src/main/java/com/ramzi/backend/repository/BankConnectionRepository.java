@@ -13,4 +13,6 @@ public interface BankConnectionRepository extends JpaRepository<BankConnection, 
     Optional<BankConnection> findByIdAndUser_Email(UUID id, String email);
 
     List<BankConnection> findByStatus(BankConnectionStatus status);
+
+    Optional<BankConnection> findByPythonSessionId(String pythonSessionId);
 }

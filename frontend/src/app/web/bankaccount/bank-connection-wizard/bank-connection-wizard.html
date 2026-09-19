@@ -152,19 +152,21 @@
         <p class="tan-hint" data-testid="tan-hint">{{ tanHint() }}</p>
 
         <form (ngSubmit)="submitTan()">
-          <div class="premium-input-group">
-            <label for="tan">TAN</label>
-            <input
-              id="tan"
-              name="tan"
-              class="ultra-modern-input"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              data-testid="tan-input"
-              [ngModel]="tan()"
-              (ngModelChange)="tan.set($event)">
-          </div>
+          @if (!tanDecoupled()) {
+            <div class="premium-input-group">
+              <label for="tan">TAN</label>
+              <input
+                id="tan"
+                name="tan"
+                class="ultra-modern-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                data-testid="tan-input"
+                [ngModel]="tan()"
+                (ngModelChange)="tan.set($event)">
+            </div>
+          }
 
           <div class="wizard-actions">
             <button type="button" class="glass-btn" (click)="back()" [disabled]="busy()">Zurück</button>

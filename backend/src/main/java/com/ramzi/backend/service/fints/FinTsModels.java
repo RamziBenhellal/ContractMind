@@ -19,6 +19,8 @@ public final class FinTsModels {
 
     public record ConfirmTanResponse(List<FinTsAccount> accounts) {}
 
+    public record SelectTanResponse(String hint, boolean decoupled, String challenge) {}
+
     public record FinTsAccount(String iban, String accountType, BigDecimal balance, String bankName) {}
 
     public record SyncResponse(List<SyncedAccount> accounts) {}

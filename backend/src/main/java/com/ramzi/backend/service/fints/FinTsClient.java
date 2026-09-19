@@ -11,6 +11,8 @@ public interface FinTsClient {
 
     FinTsModels.SessionStartResponse startSession(String blz, String loginId, String pin);
 
+    FinTsModels.SelectTanResponse selectTanMethod(String sessionId, String tanMethodId);
+
     List<FinTsModels.FinTsAccount> confirmTan(String sessionId, String tanMethodId, String tan);
 
     FinTsModels.SyncResponse sync(String blz, String loginId, String pin);

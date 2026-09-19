@@ -32,5 +32,6 @@ fints:
   service:
     url: http://localhost:9
   encryption-key: test-only-fints-key
+  internal-token: test-internal
   sync:
     enabled: false

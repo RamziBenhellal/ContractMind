@@ -43,10 +43,14 @@ public class BankConnectionException extends RuntimeException {
     }
 
     public static BankConnectionException bankUnreachable() {
-        return new BankConnectionException(
-                "BANK_UNREACHABLE",
-                "Deine Bank ist gerade nicht erreichbar. Bitte versuche es später noch einmal.",
-                HttpStatus.SERVICE_UNAVAILABLE);
+        return bankUnreachable(null);
+    }
+
+    public static BankConnectionException bankUnreachable(String detail) {
+        String message = (detail != null && !detail.isBlank())
+                ? detail
+                : "Deine Bank ist gerade nicht erreichbar. Bitte versuche es später noch einmal.";
+        return new BankConnectionException("BANK_UNREACHABLE", message, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     public static BankConnectionException searchFailed() {

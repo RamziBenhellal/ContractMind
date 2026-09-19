@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from api.contract import router as contract_router
 from api.chat import router as chat_router
 from api.classify import router as classify_router
+from api.bank_connection import register_exception_handlers, router as fints_router
 import uvicorn
 
 app = FastAPI(title="ContractMind AI Service", version="1.0")
@@ -9,6 +10,8 @@ app = FastAPI(title="ContractMind AI Service", version="1.0")
 app.include_router(contract_router)
 app.include_router(chat_router)
 app.include_router(classify_router)
+app.include_router(fints_router)
+register_exception_handlers(app)
 
 @app.get("/")
 def health_check():

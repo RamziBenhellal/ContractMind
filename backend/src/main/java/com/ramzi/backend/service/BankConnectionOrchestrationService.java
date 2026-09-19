@@ -76,6 +76,26 @@ public class BankConnectionOrchestrationService {
         return new StartConnectionResponse(connection.getId().toString(), tanMethods);
     }
 
+    /** Setzt das TAN-Verfahren und stößt die Bank-Challenge an (pushTAN/chipTAN). */
+    public SelectTanMethodResponse selectTanMethod(String email, UUID connectionId, SelectTanMethodRequest request) {
+        BankConnection connection = connectionRepository.findByIdAndUser_Email(connectionId, email)
+                .orElseThrow(BankConnectionException::notFound);
+        if (connection.getStatus() != BankConnectionStatus.PENDING_TAN) {
+            throw BankConnectionException.notPending();
+        }
+        FinTsModels.SelectTanResponse selected = finTsClient.selectTanMethod(
+                connection.getPythonSessionId(),
+                request.tanMethodId()
+        );
+        connection.setSelectedTanMethodId(request.tanMethodId());
+        connectionRepository.save(connection);
+        return new SelectTanMethodResponse(
+                selected != null ? selected.hint() : null,
+                selected != null && selected.decoupled(),
+                selected != null ? selected.challenge() : null
+        );
+    }
+
     /**
      * Bestätigt die TAN, legt für jedes Konto ein BankAccount (Phase 1) an
      * und setzt den Connection-Status auf ACTIVE.
@@ -138,7 +158,18 @@ public class BankConnectionOrchestrationService {
 
         CredentialsPayload credentials = encryptionService.decryptCredentials(connection.getEncryptedCredentials());
         FinTsModels.SyncResponse sync = finTsClient.sync(connection.getBlz(), credentials.loginId(), credentials.pin());
+        applySyncResult(connection, sync);
+    }
 
+    /** Vom Python-FinTS-Dienst angestoßen: Umsätze persistieren und klassifizieren. */
+    @Transactional
+    public void ingestFromPython(String pythonSessionId, FinTsModels.SyncResponse sync) {
+        BankConnection connection = connectionRepository.findByPythonSessionId(pythonSessionId)
+                .orElseThrow(BankConnectionException::notFound);
+        applySyncResult(connection, sync);
+    }
+
+    private void applySyncResult(BankConnection connection, FinTsModels.SyncResponse sync) {
         List<BankTransaction> created = new ArrayList<>();
         if (sync.accounts() != null) {
             for (FinTsModels.SyncedAccount remote : sync.accounts()) {

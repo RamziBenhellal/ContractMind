@@ -1,6 +1,7 @@
 package com.ramzi.backend.controller;
 
 import com.ramzi.backend.dto.AvailableBalanceDto;
+import com.ramzi.backend.dto.CalendarMonthViewDto;
 import com.ramzi.backend.dto.CalendarOccurrenceDto;
 import com.ramzi.backend.service.BankCalendarService;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,13 @@ public class BankCalendarController {
     @GetMapping({"/api/calendar/available-balance", "/calendar/available-balance"})
     public ResponseEntity<AvailableBalanceDto> availableBalance(Principal principal) {
         return ResponseEntity.ok(calendarService.availableBalance(principal.getName()));
+    }
+
+    @GetMapping({"/api/calendar/month-view", "/calendar/month-view"})
+    public ResponseEntity<CalendarMonthViewDto> getMonthView(
+            @RequestParam(required = false) String month,
+            Principal principal) {
+        return ResponseEntity.ok(calendarService.getMonthView(principal.getName(), parseMonth(month)));
     }
 
     private YearMonth parseMonth(String month) {

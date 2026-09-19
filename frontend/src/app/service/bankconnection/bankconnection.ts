@@ -27,6 +27,12 @@ export interface BankConnectionStarted {
   tanMethods: TanMethod[];
 }
 
+export interface TanChallenge {
+  hint?: string;
+  decoupled: boolean;
+  challenge?: string;
+}
+
 export interface ConnectedAccount {
   iban: string;
   accountType: string;
@@ -104,6 +110,12 @@ export class BankConnectionService {
     return this.http
       .post<BankConnectionStarted>(`${this.apiUrl}/bank-connections`, credentials)
       .pipe(catchError(error => throwError(() => toBankConnectionError(error, 'INVALID_PIN'))));
+  }
+
+  selectTanMethod(connectionId: string, tanMethodId: string): Observable<TanChallenge> {
+    return this.http
+      .post<TanChallenge>(`${this.apiUrl}/bank-connections/${connectionId}/tan-method`, { tanMethodId })
+      .pipe(catchError(error => throwError(() => toBankConnectionError(error, 'TAN_INVALID'))));
   }
 
   confirmTan(connectionId: string, tanMethodId: string, tan: string): Observable<ConnectedAccount[]> {

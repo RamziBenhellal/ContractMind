@@ -25,7 +25,7 @@ export const BANK_SEARCH_MIN_LENGTH = 2;
 /** Fallback-Hinweise, falls die Bank keinen eigenen Text mitschickt */
 const TAN_HINTS: Record<string, string> = {
   chiptan: 'Bestätige die Anfrage in deiner chipTAN-App und gib die angezeigte TAN ein.',
-  pushtan: 'Wir haben dir eine Push-Nachricht geschickt. Bestätige sie in deiner pushTAN-App.',
+  pushtan: 'Die Freigabe kommt nach der Auswahl in deine S-pushTAN-App.',
   smstan: 'Wir haben dir eine TAN per SMS geschickt.',
   phototan: 'Scanne die Grafik in deiner photoTAN-App und gib die angezeigte TAN ein.',
 };
@@ -87,9 +87,12 @@ export class BankConnectionWizardComponent {
 
   // --- Schritt 4: TAN ---
   readonly tan = signal('');
-  readonly tanValid = computed(() => this.tan().trim().length > 0);
+  readonly tanDecoupled = signal(false);
+  readonly challengeHint = signal<string | null>(null);
+  readonly tanValid = computed(() => this.tanDecoupled() || this.tan().trim().length > 0);
 
   readonly tanHint = computed(() => {
+    if (this.challengeHint()) return this.challengeHint() as string;
     const method = this.tanMethod();
     if (!method) return GENERIC_TAN_HINT;
     if (method.hint) return method.hint;
@@ -158,6 +161,10 @@ export class BankConnectionWizardComponent {
             connectionId: response.connectionId,
             tanMethods: response.tanMethods,
           });
+          const methods = response.tanMethods ?? [];
+          if (methods.length === 1) {
+            this.triggerTanChallenge(response.connectionId, methods[0]);
+          }
         },
         error: (error: unknown) => {
           this.pin.set('');
@@ -176,8 +183,10 @@ export class BankConnectionWizardComponent {
 
   confirmTanMethod() {
     const tanMethod = this.pendingTanMethod();
-    if (!tanMethod) return;
+    const connectionId = this.state().connectionId;
+    if (!tanMethod || !connectionId || this.busy()) return;
     this.dispatch({ type: 'SELECT_TAN_METHOD', tanMethod });
+    this.triggerTanChallenge(connectionId, tanMethod);
   }
 
   // ==========================================
@@ -214,9 +223,25 @@ export class BankConnectionWizardComponent {
     this.loginId.set('');
     this.pin.set('');
     this.tan.set('');
+    this.tanDecoupled.set(false);
+    this.challengeHint.set(null);
     this.pendingTanMethod.set(null);
     this.bankResults.set([]);
     this.dispatch({ type: 'RESET' });
+  }
+
+  private triggerTanChallenge(connectionId: string, tanMethod: TanMethod) {
+    this.dispatch({ type: 'SUBMIT' });
+    this.service.selectTanMethod(connectionId, tanMethod.id).subscribe({
+      next: challenge => {
+        this.tanDecoupled.set(!!challenge.decoupled);
+        this.challengeHint.set(challenge.hint || challenge.challenge || null);
+        this.dispatch({ type: 'CHALLENGE_READY' });
+      },
+      error: (error: unknown) => {
+        this.dispatch({ type: 'FAIL', error: this.asWizardError(error) });
+      },
+    });
   }
 
   private dispatch(event: WizardEvent) {

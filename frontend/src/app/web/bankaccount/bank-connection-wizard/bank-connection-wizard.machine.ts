@@ -25,6 +25,7 @@ export type WizardEvent =
   | { type: 'SUBMIT' }
   | { type: 'CONNECTION_STARTED'; connectionId: string; tanMethods: TanMethod[] }
   | { type: 'SELECT_TAN_METHOD'; tanMethod: TanMethod }
+  | { type: 'CHALLENGE_READY' }
   | { type: 'TAN_CONFIRMED'; accounts: ConnectedAccount[] }
   | { type: 'FAIL'; error: BankConnectionError }
   | { type: 'BACK' }
@@ -107,6 +108,10 @@ export function wizardReducer(state: WizardState, event: WizardEvent): WizardSta
     case 'SELECT_TAN_METHOD':
       if (state.step !== 'tan-method') return state;
       return { ...state, tanMethod: event.tanMethod, step: 'tan-entry', error: null };
+
+    case 'CHALLENGE_READY':
+      if (state.step !== 'tan-entry') return state;
+      return { ...state, busy: false, error: null };
 
     case 'TAN_CONFIRMED':
       if (state.step !== 'tan-entry') return state;

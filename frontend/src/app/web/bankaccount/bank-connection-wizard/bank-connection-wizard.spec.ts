@@ -61,6 +61,13 @@ describe('BankConnectionWizardComponent', () => {
     fixture.detectChanges();
   }
 
+  function flushTanChallenge(hint: string | null = null, decoupled = false) {
+    const request = httpMock.expectOne(`${API}/bank-connections/conn-1/tan-method`);
+    expect(request.request.method).toBe('POST');
+    request.flush({ hint, decoupled });
+    fixture.detectChanges();
+  }
+
   function submitCredentials(tanMethods: TanMethod[]) {
     component.loginId.set('1234567');
     component.pin.set('geheim');
@@ -70,6 +77,9 @@ describe('BankConnectionWizardComponent', () => {
       .expectOne(`${API}/bank-connections`)
       .flush({ connectionId: 'conn-1', tanMethods });
     fixture.detectChanges();
+    if (tanMethods.length === 1) {
+      flushTanChallenge(tanMethods[0].hint ?? null);
+    }
   }
 
   function goToTanEntry() {
@@ -165,6 +175,7 @@ describe('BankConnectionWizardComponent', () => {
       });
 
       request.flush({ connectionId: 'conn-1', tanMethods: [CHIPTAN] });
+      flushTanChallenge();
     });
 
     it('sendet ohne vollständige Eingaben nichts', () => {
@@ -244,10 +255,11 @@ describe('BankConnectionWizardComponent', () => {
       expect(component.step()).toBe('tan-method');
 
       component.confirmTanMethod();
-      fixture.detectChanges();
+      flushTanChallenge(PUSHTAN.hint);
 
       expect(component.step()).toBe('tan-entry');
       expect(component.tanMethod()).toEqual(PUSHTAN);
+      expect(query('tan-hint')?.textContent).toContain('Banking-App');
     });
 
     it('bleibt stehen, solange nichts gewählt wurde', () => {

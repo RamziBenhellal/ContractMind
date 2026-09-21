@@ -1,5 +1,6 @@
 package com.ramzi.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ramzi.backend.entity.CalendarEntryType;
 
 import java.math.BigDecimal;
@@ -8,7 +9,7 @@ import java.time.LocalDate;
 public record CalendarOccurrenceDto(
         Long sourceEntryId,
         String title,
-        LocalDate date,
+        @JsonFormat(pattern = "yyyy-MM-dd") LocalDate date,
         BigDecimal amount,
         CalendarEntryType type,
         String recurrenceRule,

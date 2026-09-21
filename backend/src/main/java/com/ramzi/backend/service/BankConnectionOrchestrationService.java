@@ -14,16 +14,22 @@ import com.ramzi.backend.service.fints.FinTsModels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -38,6 +44,7 @@ public class BankConnectionOrchestrationService {
     private final BankTransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final TransactionClassificationService classificationService;
+    private final PlatformTransactionManager transactionManager;
 
     public List<BankSearchItem> searchBanks(String query) {
         return finTsClient.searchBanks(query).stream()
@@ -100,7 +107,6 @@ public class BankConnectionOrchestrationService {
      * Bestätigt die TAN, legt für jedes Konto ein BankAccount (Phase 1) an
      * und setzt den Connection-Status auf ACTIVE.
      */
-    @Transactional
     public List<ConnectedAccountDto> confirmTan(String email, UUID connectionId, ConfirmTanRequest request) {
         BankConnection connection = connectionRepository.findByIdAndUser_Email(connectionId, email)
                 .orElseThrow(BankConnectionException::notFound);
@@ -115,21 +121,69 @@ public class BankConnectionOrchestrationService {
                 request.tan()
         );
 
-        connection.setSelectedTanMethodId(request.tanMethodId());
-        connection.setStatus(BankConnectionStatus.ACTIVE);
-        connection.setLastSyncedAt(Instant.now());
-        connection.setLastSyncError(null);
+        List<BankTransaction> created = new ArrayList<>();
+        List<ConnectedAccountDto> result = persistInTransaction(() -> {
+            BankConnection current = connectionRepository.findById(connectionId)
+                    .orElseThrow(BankConnectionException::notFound);
+            current.setSelectedTanMethodId(request.tanMethodId());
+            current.setStatus(BankConnectionStatus.ACTIVE);
+            current.setLastSyncedAt(Instant.now());
+            current.setLastSyncError(null);
 
-        List<ConnectedAccountDto> result = new ArrayList<>();
-        for (FinTsModels.FinTsAccount remote : accounts) {
-            BankAccount persisted = upsertBankAccount(connection, remote);
-            result.add(new ConnectedAccountDto(
-                    persisted.getIban(),
-                    remote.accountType(),
-                    currentBalance(persisted, remote.balance())
-            ));
-        }
+            List<ConnectedAccountDto> dtos = new ArrayList<>();
+            for (FinTsModels.FinTsAccount remote : accounts) {
+                BankAccount persisted = upsertBankAccount(current, remote);
+                persistNewTransactions(persisted, remote.transactions(), created);
+                dtos.add(new ConnectedAccountDto(
+                        persisted.getIban(),
+                        remote.accountType(),
+                        currentBalance(persisted, remote.balance())
+                ));
+            }
+            connectionRepository.save(current);
+            return dtos;
+        });
+        classifySafely(created);
         return result;
+    }
+
+    /**
+     * Lädt Kontoauszüge von der Bank, wenn lokal noch keine Umsätze gespeichert sind.
+     * Fehler der Bank (z.B. erneute TAN) dürfen den Kalender nicht blockieren.
+     */
+    public void importTransactionsIfMissing(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || !needsTransactionRefresh(user.getId())) {
+            return;
+        }
+        List<BankConnection> connections = connectionRepository.findByUser_IdAndStatus(
+                user.getId(), BankConnectionStatus.ACTIVE);
+        for (BankConnection connection : connections) {
+            if (connection.getPythonSessionId() == null || connection.getPythonSessionId().isBlank()) {
+                continue;
+            }
+            try {
+                FinTsModels.TransactionFetchResponse fetched =
+                        finTsClient.fetchTransactions(connection.getPythonSessionId());
+                if (fetched == null || fetched.accounts() == null) {
+                    continue;
+                }
+                if (fetched.forwardedToBackend()
+                        && transactionRepository.countByBankAccount_User_Id(user.getId()) > 0) {
+                    continue;
+                }
+                List<BankTransaction> created = persistInTransaction(() -> {
+                    BankConnection current = connectionRepository.findById(connection.getId())
+                            .orElse(connection);
+                    return persistAccountsAndTransactions(
+                            current, new FinTsModels.SyncResponse(fetched.accounts()));
+                });
+                classifySafely(created);
+            } catch (Exception e) {
+                log.warn("Umsätze konnten nicht von der Bank geladen werden: {}", e.getMessage());
+                markSyncError(connection.getId(), e.getMessage());
+            }
+        }
     }
 
     /** Wird vom Scheduler alle 6 Stunden für jede ACTIVE Connection aufgerufen. */
@@ -162,24 +216,43 @@ public class BankConnectionOrchestrationService {
     }
 
     /** Vom Python-FinTS-Dienst angestoßen: Umsätze persistieren und klassifizieren. */
-    @Transactional
     public void ingestFromPython(String pythonSessionId, FinTsModels.SyncResponse sync) {
-        BankConnection connection = connectionRepository.findByPythonSessionId(pythonSessionId)
-                .orElseThrow(BankConnectionException::notFound);
-        applySyncResult(connection, sync);
+        List<BankTransaction> created = persistInTransaction(() -> {
+            BankConnection connection = connectionRepository.findByPythonSessionId(pythonSessionId)
+                    .orElseThrow(BankConnectionException::notFound);
+            return persistAccountsAndTransactions(connection, sync);
+        });
+        classifySafely(created);
     }
 
-    private void applySyncResult(BankConnection connection, FinTsModels.SyncResponse sync) {
+    @Transactional
+    public void applySyncResult(BankConnection connection, FinTsModels.SyncResponse sync) {
+        List<BankTransaction> created = persistAccountsAndTransactions(connection, sync);
+        classifySafely(created);
+    }
+
+    public List<BankTransaction> applyFetchedAccounts(
+            BankConnection connection,
+            List<FinTsModels.SyncedAccount> accounts
+    ) {
+        List<BankTransaction> created = persistInTransaction(() -> persistAccountsAndTransactions(
+                connection, new FinTsModels.SyncResponse(accounts == null ? List.of() : accounts)));
+        classifySafely(created);
+        return created == null ? List.of() : created;
+    }
+
+    private List<BankTransaction> persistAccountsAndTransactions(
+            BankConnection connection,
+            FinTsModels.SyncResponse sync
+    ) {
         List<BankTransaction> created = new ArrayList<>();
-        if (sync.accounts() != null) {
+        if (sync != null && sync.accounts() != null) {
             for (FinTsModels.SyncedAccount remote : sync.accounts()) {
                 BankAccount account = upsertBankAccount(connection, new FinTsModels.FinTsAccount(
                         remote.iban(), remote.accountType(), remote.balance(), remote.bankName()
                 ));
                 if (remote.transactions() != null) {
-                    for (FinTsModels.FinTsTransaction tx : remote.transactions()) {
-                        saveIfNew(account, tx).ifPresent(created::add);
-                    }
+                    persistNewTransactions(account, remote.transactions(), created);
                 }
             }
         }
@@ -187,11 +260,63 @@ public class BankConnectionOrchestrationService {
         connection.setLastSyncedAt(Instant.now());
         connection.setLastSyncError(null);
         connectionRepository.save(connection);
+        log.info("Persistierte {} neue Umsätze für Verbindung {}", created.size(), connection.getId());
+        return created;
+    }
 
-        if (!created.isEmpty()) {
+    private void persistNewTransactions(
+            BankAccount account,
+            List<FinTsModels.FinTsTransaction> transactions,
+            List<BankTransaction> created
+    ) {
+        if (transactions == null) {
+            return;
+        }
+        Set<String> seen = new HashSet<>();
+        for (FinTsModels.FinTsTransaction tx : transactions) {
+            saveIfNew(account, tx, seen).ifPresent(created::add);
+        }
+    }
+
+    private void classifySafely(List<BankTransaction> created) {
+        if (created == null || created.isEmpty()) {
+            return;
+        }
+        try {
             classificationService.classifyNewTransactions(created);
             transactionRepository.saveAll(created);
+        } catch (Exception e) {
+            log.warn("Klassifikation fehlgeschlagen, Umsätze bleiben gespeichert: {}", e.getMessage());
         }
+    }
+
+    private boolean needsTransactionRefresh(Long userId) {
+        LocalDate newest = transactionRepository.findMaxBookingDateByUserId(userId).orElse(null);
+        LocalDate today = LocalDate.now();
+        if (newest != null && !newest.isBefore(today.minusDays(7))) {
+            return false;
+        }
+        Instant recentSyncCutoff = Instant.now().minus(Duration.ofMinutes(5));
+        boolean syncedJustNow = connectionRepository.findByUser_IdAndStatus(userId, BankConnectionStatus.ACTIVE)
+                .stream()
+                .map(BankConnection::getLastSyncedAt)
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(synced -> synced.isAfter(recentSyncCutoff));
+        return newest == null || !syncedJustNow;
+    }
+
+    private <T> T persistInTransaction(java.util.function.Supplier<T> work) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return template.execute(status -> work.get());
+    }
+
+    private void markSyncError(UUID connectionId, String message) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.executeWithoutResult(status -> connectionRepository.findById(connectionId).ifPresent(failed -> {
+            failed.setLastSyncError(trimError(message));
+            connectionRepository.save(failed);
+        }));
     }
 
     private BankAccount upsertBankAccount(BankConnection connection, FinTsModels.FinTsAccount remote) {
@@ -234,9 +359,17 @@ public class BankConnectionOrchestrationService {
         return bankAccountRepository.save(account);
     }
 
-    private java.util.Optional<BankTransaction> saveIfNew(BankAccount account, FinTsModels.FinTsTransaction tx) {
-        String externalId = deriveExternalId(tx);
-        if (transactionRepository.existsByBankAccountAndExternalId(account, externalId)) {
+    private java.util.Optional<BankTransaction> saveIfNew(
+            BankAccount account,
+            FinTsModels.FinTsTransaction tx,
+            Set<String> seen
+    ) {
+        if (tx == null) {
+            return java.util.Optional.empty();
+        }
+        String externalId = truncate(deriveExternalId(tx), 255);
+        if (externalId == null || externalId.isBlank() || !seen.add(externalId)
+                || transactionRepository.existsByBankAccountAndExternalId(account, externalId)) {
             return java.util.Optional.empty();
         }
         LocalDate bookingDate = tx.bookingDate() != null ? tx.bookingDate() : LocalDate.now();
@@ -248,8 +381,8 @@ public class BankConnectionOrchestrationService {
                 .amount(tx.amount() != null ? tx.amount() : BigDecimal.ZERO)
                 .currency("EUR")
                 .purpose(tx.purpose())
-                .counterpartyName(tx.counterpartName())
-                .counterpartyIban(tx.counterpartIban())
+                .counterpartyName(truncate(tx.counterpartName(), 255))
+                .counterpartyIban(truncate(tx.counterpartIban(), 34))
                 .classification(TransactionClassification.UNCLASSIFIED)
                 .classificationStatus(ClassificationStatus.PENDING)
                 .build();
@@ -264,6 +397,7 @@ public class BankConnectionOrchestrationService {
                 String.valueOf(tx.bookingDate()),
                 String.valueOf(tx.amount()),
                 nullToEmpty(tx.purpose()),
+                nullToEmpty(tx.counterpartName()),
                 nullToEmpty(tx.counterpartIban()));
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
@@ -302,6 +436,13 @@ public class BankConnectionOrchestrationService {
 
     private static String nullToEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String truncate(String value, int max) {
+        if (value == null || value.length() <= max) {
+            return value;
+        }
+        return value.substring(0, max);
     }
 
     private static String trimError(String message) {

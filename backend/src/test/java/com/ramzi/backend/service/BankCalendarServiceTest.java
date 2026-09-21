@@ -16,6 +16,8 @@ import com.ramzi.backend.entity.User;
 import com.ramzi.backend.repository.BankAccountRepository;
 import com.ramzi.backend.repository.BankCalendarEntryRepository;
 import com.ramzi.backend.repository.BankTransactionRepository;
+import com.ramzi.backend.repository.ContractRepository;
+import com.ramzi.backend.repository.IncomeRepository;
 import com.ramzi.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,8 +34,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +50,10 @@ class BankCalendarServiceTest {
     @Mock
     private BankTransactionRepository transactionRepository;
     @Mock
+    private ContractRepository contractRepository;
+    @Mock
+    private IncomeRepository incomeRepository;
+    @Mock
     private UserRepository userRepository;
 
     private BankCalendarService service;
@@ -57,9 +65,13 @@ class BankCalendarServiceTest {
                 calendarEntryRepository,
                 bankAccountRepository,
                 transactionRepository,
+                contractRepository,
+                incomeRepository,
                 userRepository,
                 clock
         );
+        lenient().when(contractRepository.findByUser_Id(any())).thenReturn(List.of());
+        lenient().when(incomeRepository.findByUser_Id(any())).thenReturn(List.of());
     }
 
     @Test
@@ -181,6 +193,32 @@ class BankCalendarServiceTest {
     }
 
     @Test
+    void attachesPlannedCalendarEntriesToHistoricalDaysWithoutChangingActualBalance() {
+        User user = User.builder().id(1L).email("alice@test.de").password("pw").build();
+        BankAccount giro = account(3L, user, "Giro", new BigDecimal("1000.00"));
+        when(bankAccountRepository.findByUser_Id(1L)).thenReturn(List.of(giro));
+        when(calendarEntryRepository.findByUser_Id(1L)).thenReturn(List.of(
+                entry(user, 11L, "Miete", LocalDate.of(2026, 1, 15), new BigDecimal("-650.00"),
+                        CalendarEntryType.CONTRACT_PAYMENT, "FREQ=MONTHLY;BYMONTHDAY=15", null, null)
+        ));
+        when(transactionRepository.findByBankAccount_User_IdAndBookingDateBetween(any(), any(), any()))
+                .thenReturn(List.of());
+
+        CalendarMonthViewDto view = service.getMonthView(1L, YearMonth.of(2026, 9));
+
+        HistoricalDayDto day15 = historical(view.historicalDays(), LocalDate.of(2026, 9, 15));
+        assertThat(day15.actualBalance()).isEqualByComparingTo("1000.00");
+        assertThat(day15.plannedEntries()).hasSize(1);
+        assertThat(day15.plannedEntries().get(0).title()).isEqualTo("Miete");
+        assertThat(day15.plannedEntries().get(0).amount()).isEqualByComparingTo("-650.00");
+        assertThat(day15.plannedEntries().get(0).type()).isEqualTo(CalendarEntryType.CONTRACT_PAYMENT);
+        assertThat(view.projectedDays().stream()
+                .flatMap(day -> day.projectedEntries().stream())
+                .map(CalendarOccurrenceDto::title))
+                .doesNotContain("Miete");
+    }
+
+    @Test
     void excludesRedeemedContractsFromProjectionZone() {
         User user = User.builder().id(1L).email("alice@test.de").password("pw").build();
         BankAccount giro = account(3L, user, "Giro", new BigDecimal("1000.00"));
@@ -280,12 +318,51 @@ class BankCalendarServiceTest {
                 .containsExactly(LocalDate.of(2026, 9, 30));
     }
 
+    @Test
+    void dayViewReturnsBookedTransactionsAndEndOfDayBalanceForTodayAndPast() {
+        User user = User.builder().id(1L).email("alice@test.de").password("pw").build();
+        BankAccount giro = account(3L, user, "Giro", new BigDecimal("500.00"));
+        BankTransaction past = tx(11L, giro, LocalDate.of(2026, 9, 10), new BigDecimal("-10.00"));
+        BankTransaction later = tx(12L, giro, LocalDate.of(2026, 9, 12), new BigDecimal("5.00"));
+        BankTransaction todayTx = tx(13L, giro, LocalDate.of(2026, 9, 19), new BigDecimal("-20.00"));
+
+        when(bankAccountRepository.findByUser_Id(1L)).thenReturn(List.of(giro));
+        when(transactionRepository.findByBankAccount_User_IdAndBookingDateBetween(
+                eq(1L), eq(LocalDate.of(2026, 9, 10)), eq(LocalDate.of(2026, 9, 19))))
+                .thenReturn(List.of(past, later, todayTx));
+        when(transactionRepository.findByBankAccount_User_IdAndBookingDateBetween(
+                eq(1L), eq(LocalDate.of(2026, 9, 19)), eq(LocalDate.of(2026, 9, 19))))
+                .thenReturn(List.of(todayTx));
+
+        HistoricalDayDto pastDay = service.getDayView(1L, LocalDate.of(2026, 9, 10));
+        assertThat(pastDay.actualBalance()).isEqualByComparingTo("515.00");
+        assertThat(pastDay.actualTransactions()).hasSize(1);
+        assertThat(pastDay.actualTransactions().get(0).transactions())
+                .extracting(ActualTransactionDto::amount)
+                .containsExactly(new BigDecimal("-10.00"));
+
+        HistoricalDayDto today = service.getDayView(1L, LocalDate.of(2026, 9, 19));
+        assertThat(today.actualBalance()).isEqualByComparingTo("500.00");
+        assertThat(today.actualTransactions().get(0).transactions())
+                .extracting(ActualTransactionDto::purpose)
+                .containsExactly("tx-13");
+    }
+
+    @Test
+    void dayViewRejectsFutureDates() {
+        assertThatThrownBy(() -> service.getDayView(1L, LocalDate.of(2026, 9, 20)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("today or earlier");
+    }
+
     private BankCalendarService serviceAt(LocalDate date) {
         Clock clock = Clock.fixed(date.atStartOfDay().toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
         return new BankCalendarService(
                 calendarEntryRepository,
                 bankAccountRepository,
                 transactionRepository,
+                contractRepository,
+                incomeRepository,
                 userRepository,
                 clock
         );

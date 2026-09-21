@@ -14,5 +14,7 @@ public interface BankConnectionRepository extends JpaRepository<BankConnection, 
 
     List<BankConnection> findByStatus(BankConnectionStatus status);
 
+    List<BankConnection> findByUser_IdAndStatus(Long userId, BankConnectionStatus status);
+
     Optional<BankConnection> findByPythonSessionId(String pythonSessionId);
 }

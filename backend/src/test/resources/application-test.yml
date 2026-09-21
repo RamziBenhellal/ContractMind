@@ -28,6 +28,9 @@ ai-service:
     max-attempts: 2
     backoff-ms: 50
 
+jwt:
+  secret: test-only-jwt-secret
+
 fints:
   service:
     url: http://localhost:9
@@ -35,3 +38,5 @@ fints:
   internal-token: test-internal
   sync:
     enabled: false
+    min-interval: 5m
+    timeout: 15s

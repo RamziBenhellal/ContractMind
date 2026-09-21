@@ -60,11 +60,6 @@ class FinTsAccount(CamelModel):
     bank_name: Optional[str] = Field(default=None, alias="bankName")
 
 
-class ConfirmTanResponse(CamelModel):
-    connection_id: str = Field(alias="connectionId")
-    accounts: list[FinTsAccount] = Field(default_factory=list)
-
-
 class FinTsTransaction(CamelModel):
     external_id: Optional[str] = Field(default=None, alias="externalId")
     booking_date: Optional[date] = Field(default=None, alias="bookingDate")
@@ -76,6 +71,11 @@ class FinTsTransaction(CamelModel):
 
 class SyncedAccount(FinTsAccount):
     transactions: list[FinTsTransaction] = Field(default_factory=list)
+
+
+class ConfirmTanResponse(CamelModel):
+    connection_id: str = Field(alias="connectionId")
+    accounts: list[SyncedAccount] = Field(default_factory=list)
 
 
 class SyncRequest(CamelModel):

@@ -18,6 +18,8 @@ import com.ramzi.backend.entity.User;
 import com.ramzi.backend.repository.BankAccountRepository;
 import com.ramzi.backend.repository.BankCalendarEntryRepository;
 import com.ramzi.backend.repository.BankTransactionRepository;
+import com.ramzi.backend.repository.ContractRepository;
+import com.ramzi.backend.repository.IncomeRepository;
 import com.ramzi.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,40 +46,89 @@ public class BankCalendarService {
     private final BankCalendarEntryRepository calendarEntryRepository;
     private final BankAccountRepository bankAccountRepository;
     private final BankTransactionRepository transactionRepository;
+    private final ContractRepository contractRepository;
+    private final IncomeRepository incomeRepository;
     private final UserRepository userRepository;
     private final Clock clock;
     private final RecurrenceCalculator recurrenceCalculator = new RecurrenceCalculator();
 
-    public void ensureContractEntry(User user, Contract contract, LocalDate after) {
-        if (contract == null || calendarEntryRepository.existsBySourceContract_Id(contract.getId())) {
+    /**
+     * Legt oder aktualisiert den Kalender-Eintrag zu einem Vertrag.
+     * Seed liegt im Vormonat, damit der aktuelle Monat (auch nach dem Fälligkeitstag) noch erscheint.
+     */
+    public void ensureContractEntry(User user, Contract contract, LocalDate reference) {
+        if (user == null || contract == null || contract.getId() == null) {
             return;
         }
-        LocalDate expected = nextMonthlyDate(after, contract.getDueDayOfMonth());
-        calendarEntryRepository.save(BankCalendarEntry.builder()
+        LocalDate seed = monthlySeed(reference, contract.getDueDayOfMonth());
+        String title = firstNonBlank(contract.getProvider(), "Vertrag");
+        BigDecimal amount = signedAmount(contract.getMonthlyCost(), true);
+        String rule = monthlyRule(contract.getDueDayOfMonth());
+
+        calendarEntryRepository.findBySourceContract_Id(contract.getId()).ifPresentOrElse(entry -> {
+            entry.setTitle(title);
+            entry.setExpectedAmount(amount);
+            entry.setRecurrenceRule(rule);
+            entry.setExpectedDate(seed);
+            calendarEntryRepository.save(entry);
+        }, () -> calendarEntryRepository.save(BankCalendarEntry.builder()
                 .user(user)
-                .title(firstNonBlank(contract.getProvider(), "Vertrag"))
-                .expectedDate(expected)
-                .expectedAmount(signedAmount(contract.getMonthlyCost(), true))
+                .title(title)
+                .expectedDate(seed)
+                .expectedAmount(amount)
                 .type(CalendarEntryType.CONTRACT_PAYMENT)
-                .recurrenceRule(monthlyRule(contract.getDueDayOfMonth()))
+                .recurrenceRule(rule)
                 .sourceContract(contract)
-                .build());
+                .build()));
     }
 
-    public void ensureIncomeEntry(User user, Income income, LocalDate after) {
-        if (income == null || calendarEntryRepository.existsBySourceIncome_Id(income.getId())) {
+    public void ensureIncomeEntry(User user, Income income, LocalDate reference) {
+        if (user == null || income == null || income.getId() == null) {
             return;
         }
-        LocalDate expected = nextMonthlyDate(after, income.getPaydayOfMonth());
-        calendarEntryRepository.save(BankCalendarEntry.builder()
+        LocalDate seed = monthlySeed(reference, income.getPaydayOfMonth());
+        String title = firstNonBlank(income.getSource(), "Einkommen");
+        BigDecimal amount = signedAmount(income.getAmount(), false);
+        String rule = monthlyRule(income.getPaydayOfMonth());
+
+        calendarEntryRepository.findBySourceIncome_Id(income.getId()).ifPresentOrElse(entry -> {
+            entry.setTitle(title);
+            entry.setExpectedAmount(amount);
+            entry.setRecurrenceRule(rule);
+            entry.setExpectedDate(seed);
+            calendarEntryRepository.save(entry);
+        }, () -> calendarEntryRepository.save(BankCalendarEntry.builder()
                 .user(user)
-                .title(firstNonBlank(income.getSource(), "Einkommen"))
-                .expectedDate(expected)
-                .expectedAmount(signedAmount(income.getAmount(), false))
+                .title(title)
+                .expectedDate(seed)
+                .expectedAmount(amount)
                 .type(CalendarEntryType.INCOME)
-                .recurrenceRule(monthlyRule(income.getPaydayOfMonth()))
+                .recurrenceRule(rule)
                 .sourceIncome(income)
-                .build());
+                .build()));
+    }
+
+    /** Fehlende Kalender-Einträge aus Verträgen/Einkommen nachziehen (z.B. manuell angelegt). */
+    public void syncCalendarEntriesFromSources(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return;
+        }
+        LocalDate today = LocalDate.now(clock);
+        for (Contract contract : contractRepository.findByUser_Id(userId)) {
+            if (isPendingAiContract(contract)) {
+                continue;
+            }
+            ensureContractEntry(user, contract, today);
+        }
+        for (Income income : incomeRepository.findByUser_Id(userId)) {
+            ensureIncomeEntry(user, income, today);
+        }
+    }
+
+    private static boolean isPendingAiContract(Contract contract) {
+        String status = contract.getStatus();
+        return status != null && (status.startsWith("WAITING") || status.startsWith("AI_") || status.contains("ERROR"));
     }
 
     @Transactional(readOnly = true)
@@ -108,8 +159,9 @@ public class BankCalendarService {
         return getMonthView(requireUser(email).getId(), month);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public CalendarMonthViewDto getMonthView(Long userId, YearMonth month) {
+        syncCalendarEntriesFromSources(userId);
         LocalDate today = LocalDate.now(clock);
         LocalDate monthStart = month.atDay(1);
         LocalDate monthEnd = month.atEndOfMonth();
@@ -126,9 +178,28 @@ public class BankCalendarService {
         return new CalendarMonthViewDto(
                 month,
                 today,
-                buildHistoricalDays(monthStart, monthEnd, today, accounts, booked),
+                buildHistoricalDays(monthStart, monthEnd, today, accounts, booked, templates),
                 buildProjectedDays(monthStart, monthEnd, today, accounts, booked, templates)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public HistoricalDayDto getDayView(String email, LocalDate date) {
+        return getDayView(requireUser(email).getId(), date);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoricalDayDto getDayView(Long userId, LocalDate date) {
+        LocalDate today = LocalDate.now(clock);
+        if (date.isAfter(today)) {
+            throw new IllegalArgumentException("date must be today or earlier");
+        }
+        List<BankAccount> accounts = bankAccountRepository.findByUser_Id(userId).stream()
+                .sorted(Comparator.comparing(BankAccount::getId, Comparator.nullsLast(Long::compareTo)))
+                .toList();
+        List<BankTransaction> booked = transactionRepository
+                .findByBankAccount_User_IdAndBookingDateBetween(userId, date, today);
+        return toHistoricalDay(date, today, accounts, booked);
     }
 
     @Transactional(readOnly = true)
@@ -161,15 +232,19 @@ public class BankCalendarService {
             LocalDate monthEnd,
             LocalDate today,
             List<BankAccount> accounts,
-            List<BankTransaction> booked
+            List<BankTransaction> booked,
+            List<BankCalendarEntry> templates
     ) {
         List<HistoricalDayDto> days = new ArrayList<>();
         LocalDate end = monthEnd.isBefore(today) ? monthEnd : today.minusDays(1);
         if (end.isBefore(monthStart)) {
             return List.of();
         }
+        YearMonth month = YearMonth.from(monthStart);
+        Map<LocalDate, List<CalendarOccurrenceDto>> plannedByDate = occurrencesByDate(
+                templates, month, monthStart, end, today, booked, false);
         for (LocalDate date = monthStart; !date.isAfter(end); date = date.plusDays(1)) {
-            days.add(toHistoricalDay(date, today, accounts, booked));
+            days.add(toHistoricalDay(date, today, accounts, booked, plannedByDate.getOrDefault(date, List.of())));
         }
         return days;
     }
@@ -179,6 +254,16 @@ public class BankCalendarService {
             LocalDate today,
             List<BankAccount> accounts,
             List<BankTransaction> booked
+    ) {
+        return toHistoricalDay(date, today, accounts, booked, List.of());
+    }
+
+    private HistoricalDayDto toHistoricalDay(
+            LocalDate date,
+            LocalDate today,
+            List<BankAccount> accounts,
+            List<BankTransaction> booked,
+            List<CalendarOccurrenceDto> plannedEntries
     ) {
         List<AccountTransactionGroupDto> groups = new ArrayList<>();
         List<AccountBalanceDto> balances = new ArrayList<>();
@@ -197,7 +282,7 @@ public class BankCalendarService {
                         account.getId(), account.getAccountName(), account.getIban(), txs, endOfDay));
             }
         }
-        return new HistoricalDayDto(date, groups, total, balances);
+        return new HistoricalDayDto(date, groups, total, balances, plannedEntries);
     }
 
     private List<ProjectedDayDto> buildProjectedDays(
@@ -213,27 +298,8 @@ public class BankCalendarService {
             return List.of();
         }
         YearMonth month = YearMonth.from(monthStart);
-        Set<Long> redeemedContractIds = booked.stream()
-                .map(BankTransaction::getLinkedContract)
-                .filter(Objects::nonNull)
-                .map(Contract::getId)
-                .collect(Collectors.toSet());
-        Set<Long> redeemedIncomeIds = booked.stream()
-                .map(BankTransaction::getLinkedIncome)
-                .filter(Objects::nonNull)
-                .map(Income::getId)
-                .collect(Collectors.toSet());
-
-        Map<LocalDate, List<CalendarOccurrenceDto>> byDate = new LinkedHashMap<>();
-        for (BankCalendarEntry template : templates) {
-            if (isRedeemed(template, redeemedContractIds, redeemedIncomeIds)) {
-                continue;
-            }
-            recurrenceCalculator.occurrenceInMonth(template.getExpectedDate(), template.getRecurrenceRule(), month)
-                    .filter(date -> !date.isBefore(start) && !date.isAfter(monthEnd))
-                    .map(date -> toOccurrence(template, date, today, booked))
-                    .ifPresent(occurrence -> byDate.computeIfAbsent(occurrence.date(), key -> new ArrayList<>()).add(occurrence));
-        }
+        Map<LocalDate, List<CalendarOccurrenceDto>> byDate = occurrencesByDate(
+                templates, month, start, monthEnd, today, booked, true);
 
         BigDecimal running = accounts.stream()
                 .map(BankCalendarService::accountBalance)
@@ -250,6 +316,46 @@ public class BankCalendarService {
             days.add(new ProjectedDayDto(date, entries, running));
         }
         return days;
+    }
+
+    /**
+     * Kalender-Vorkommen je Tag. {@code skipRedeemed} filtert bereits verbuchte Verträge/Einkommen
+     * (nur Prognose-Zone). Historische Tage behalten die Einträge zur Anzeige.
+     */
+    private Map<LocalDate, List<CalendarOccurrenceDto>> occurrencesByDate(
+            List<BankCalendarEntry> templates,
+            YearMonth month,
+            LocalDate fromInclusive,
+            LocalDate toInclusive,
+            LocalDate today,
+            List<BankTransaction> booked,
+            boolean skipRedeemed
+    ) {
+        Set<Long> redeemedContractIds = booked.stream()
+                .map(BankTransaction::getLinkedContract)
+                .filter(Objects::nonNull)
+                .map(Contract::getId)
+                .collect(Collectors.toSet());
+        Set<Long> redeemedIncomeIds = booked.stream()
+                .map(BankTransaction::getLinkedIncome)
+                .filter(Objects::nonNull)
+                .map(Income::getId)
+                .collect(Collectors.toSet());
+
+        Map<LocalDate, List<CalendarOccurrenceDto>> byDate = new LinkedHashMap<>();
+        for (BankCalendarEntry template : templates) {
+            if (skipRedeemed && isRedeemed(template, redeemedContractIds, redeemedIncomeIds)) {
+                continue;
+            }
+            recurrenceCalculator.occurrenceInMonth(template.getExpectedDate(), template.getRecurrenceRule(), month)
+                    .filter(date -> !date.isBefore(fromInclusive) && !date.isAfter(toInclusive))
+                    .map(date -> toOccurrence(template, date, today, booked))
+                    .ifPresent(occurrence -> byDate.computeIfAbsent(occurrence.date(), key -> new ArrayList<>()).add(occurrence));
+        }
+        for (List<CalendarOccurrenceDto> list : byDate.values()) {
+            list.sort(Comparator.comparing(CalendarOccurrenceDto::title, Comparator.nullsLast(String::compareTo)));
+        }
+        return byDate;
     }
 
     private static boolean isRedeemed(
@@ -303,6 +409,16 @@ public class BankCalendarService {
             candidate = clampDay(reference.plusMonths(1), day);
         }
         return candidate;
+    }
+
+    /**
+     * Seed für monatliche RRULE: Vormonat zum Stichtag, damit der laufende Monat
+     * (auch nach dem Fälligkeitstag) noch ein Vorkommen liefert.
+     */
+    static LocalDate monthlySeed(LocalDate reference, Integer dayOfMonth) {
+        LocalDate ref = reference != null ? reference : LocalDate.now();
+        int day = dayOfMonth != null ? dayOfMonth : ref.getDayOfMonth();
+        return clampDay(ref.minusMonths(1), day);
     }
 
     private CalendarOccurrenceDto toOccurrence(

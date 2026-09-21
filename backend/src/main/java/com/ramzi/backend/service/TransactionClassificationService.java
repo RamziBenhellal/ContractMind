@@ -38,7 +38,7 @@ public class TransactionClassificationService {
     private final BankCalendarService calendarService;
     private final ApplicationEventPublisher eventPublisher;
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void classifyNewTransactions(List<BankTransaction> transactions) {
         if (transactions == null || transactions.isEmpty()) {
             return;

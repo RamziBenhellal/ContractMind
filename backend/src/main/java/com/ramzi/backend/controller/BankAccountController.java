@@ -1,8 +1,10 @@
 package com.ramzi.backend.controller;
 
 import com.ramzi.backend.dto.BankAccountDto;
+import com.ramzi.backend.dto.SyncNowResponse;
 import com.ramzi.backend.repository.BankAccountRepository;
 import com.ramzi.backend.service.BankAccountService;
+import com.ramzi.backend.service.BankAccountSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +16,12 @@ import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
-@RequestMapping("/api/bank-accounts")
+@RequestMapping({"/api/bank-accounts", "/bank-accounts"})
 @RequiredArgsConstructor
 public class BankAccountController {
     private final BankAccountService bankAccountService;
     private final BankAccountRepository bankAccountRepository;
+    private final BankAccountSyncService bankAccountSyncService;
 
     @GetMapping
     public ResponseEntity<List<BankAccountDto>> getBankAccounts(Principal principal) {
@@ -49,6 +52,11 @@ public class BankAccountController {
         return ResponseEntity.ok(updatedAccount);
     }
     record RecordBalanceRequest(LocalDate date, BigDecimal balance) {}
+
+    @PostMapping("/{id}/sync-now")
+    public ResponseEntity<SyncNowResponse> syncNow(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(bankAccountSyncService.syncNow(principal.getName(), id));
+    }
 
     @DeleteMapping("{id}")
     public ResponseEntity<Void> deleteBankAccount(@PathVariable Long id) {

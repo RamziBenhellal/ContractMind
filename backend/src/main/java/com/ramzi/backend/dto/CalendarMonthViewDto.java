@@ -1,23 +1,33 @@
 package com.ramzi.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
 public record CalendarMonthViewDto(
-        YearMonth month,
-        LocalDate today,
+        @JsonFormat(pattern = "yyyy-MM") YearMonth month,
+        @JsonFormat(pattern = "yyyy-MM-dd") LocalDate today,
         List<HistoricalDayDto> historicalDays,
         List<ProjectedDayDto> projectedDays
 ) {
 
     public record HistoricalDayDto(
-            LocalDate date,
+            @JsonFormat(pattern = "yyyy-MM-dd") LocalDate date,
             List<AccountTransactionGroupDto> actualTransactions,
             BigDecimal actualBalance,
-            List<AccountBalanceDto> balancesByAccount
-    ) {}
+            List<AccountBalanceDto> balancesByAccount,
+            /** Kalender-Einträge (Verträge/Einkommen) – nur Anzeige, ändert actualBalance nicht. */
+            List<CalendarOccurrenceDto> plannedEntries
+    ) {
+        public HistoricalDayDto {
+            if (plannedEntries == null) {
+                plannedEntries = List.of();
+            }
+        }
+    }
 
     public record AccountTransactionGroupDto(
             Long accountId,
@@ -46,7 +56,7 @@ public record CalendarMonthViewDto(
     ) {}
 
     public record ProjectedDayDto(
-            LocalDate date,
+            @JsonFormat(pattern = "yyyy-MM-dd") LocalDate date,
             List<CalendarOccurrenceDto> projectedEntries,
             BigDecimal projectedBalance
     ) {}

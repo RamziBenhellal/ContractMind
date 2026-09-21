@@ -16,4 +16,6 @@ public interface FinTsClient {
     List<FinTsModels.FinTsAccount> confirmTan(String sessionId, String tanMethodId, String tan);
 
     FinTsModels.SyncResponse sync(String blz, String loginId, String pin);
+
+    FinTsModels.TransactionFetchResponse fetchTransactions(String pythonConnectionId);
 }

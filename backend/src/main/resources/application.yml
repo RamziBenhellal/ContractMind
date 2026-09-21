@@ -13,6 +13,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  jackson:
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -41,6 +45,10 @@ gocardless:
     id: ContractMind
     key: live_iNfqglAuUXTKAkW7vG7-vMqsMolEJhlvrnZ5yNt9
 
+# Stabiles JWT-Secret (nicht pro Restart neu würfeln — sonst 403 ohne Body im Frontend).
+jwt:
+  secret: ${JWT_SECRET:dev-only-jwt-secret-change-me}
+
 # Python FinTS-Service + AES-Schlüssel für gespeicherte Zugangsdaten.
 # FINTS_ENCRYPTION_KEY kommt aus der Umgebung oder später aus Vault.
 fints:
@@ -51,3 +59,5 @@ fints:
   sync:
     enabled: true
     cron: "0 0 */6 * * *"
+    min-interval: 5m
+    timeout: 15s

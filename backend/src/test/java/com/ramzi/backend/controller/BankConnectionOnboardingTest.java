@@ -103,7 +103,16 @@ class BankConnectionOnboardingTest {
                                 "DE89370400440532013000",
                                 "Girokonto",
                                 new BigDecimal("1420.50"),
-                                "Frankfurter Sparkasse")
+                                "Frankfurter Sparkasse",
+                                List.of(new FinTsModels.FinTsTransaction(
+                                        "tx-1",
+                                        LocalDate.of(2026, 9, 18),
+                                        new BigDecimal("-12.50"),
+                                        "Netflix",
+                                        "Netflix International",
+                                        "DE02120300000000202051"
+                                ))
+                        )
                 ));
 
         MvcResult start = mockMvc.perform(post("/api/bank-connections")
@@ -145,6 +154,12 @@ class BankConnectionOnboardingTest {
         assertThat(account.getBankName()).isEqualTo("Frankfurter Sparkasse");
         assertThat(account.getAccountType()).isEqualTo(AccountType.GIROKONTO);
         assertThat(account.getBalance()).isEqualByComparingTo("1420.50");
+
+        List<BankTransaction> txs = transactionRepository.findAll();
+        assertThat(txs).hasSize(1);
+        assertThat(txs.get(0).getPurpose()).isEqualTo("Netflix");
+        assertThat(txs.get(0).getAmount()).isEqualByComparingTo("-12.50");
+        assertThat(txs.get(0).getBookingDate()).isEqualTo(LocalDate.of(2026, 9, 18));
     }
 
     @Test
@@ -255,6 +270,55 @@ class BankConnectionOnboardingTest {
         assertThat(tx.getCurrency()).isEqualTo("EUR");
         assertThat(tx.getClassification()).isEqualTo(TransactionClassification.UNCLASSIFIED);
         assertThat(tx.getClassificationStatus()).isEqualTo(ClassificationStatus.PENDING);
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void ingestKeepsTransactionsWhenTheBatchContainsDuplicateExternalIds() throws Exception {
+        when(finTsClient.startSession(any(), any(), any()))
+                .thenReturn(new FinTsModels.SessionStartResponse(
+                        "sess-1", "Frankfurter Sparkasse",
+                        List.of(new FinTsModels.TanMethod("chipTAN", "chipTAN", null))
+                ));
+        when(finTsClient.confirmTan(any(), any(), any()))
+                .thenReturn(List.of(new FinTsModels.FinTsAccount(
+                        "DE89370400440532013000", "Girokonto", new BigDecimal("1420.50"), null)));
+
+        MvcResult start = mockMvc.perform(post("/api/bank-connections")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"blz":"50050201","loginId":"1234567","pin":"geheim"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        mockMvc.perform(post("/api/bank-connections/{id}/confirm-tan", connectionIdFrom(start))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tanMethodId":"chipTAN","tan":"847291"}
+                                """))
+                .andExpect(status().isOk());
+
+        FinTsModels.FinTsTransaction first = new FinTsModels.FinTsTransaction(
+                "tx-dup", LocalDate.of(2026, 9, 18), new BigDecimal("-12.50"), "Netflix", "Netflix", null);
+        FinTsModels.FinTsTransaction duplicate = new FinTsModels.FinTsTransaction(
+                "tx-dup", LocalDate.of(2026, 9, 18), new BigDecimal("-12.50"), "Netflix", "Netflix", null);
+        FinTsModels.FinTsTransaction other = new FinTsModels.FinTsTransaction(
+                "tx-2", LocalDate.of(2026, 9, 17), new BigDecimal("-8.00"), "Einkauf", "Markt", null);
+
+        orchestrationService.ingestFromPython("sess-1", new FinTsModels.SyncResponse(List.of(
+                new FinTsModels.SyncedAccount(
+                        "DE89370400440532013000",
+                        "Girokonto",
+                        new BigDecimal("1400.00"),
+                        "Frankfurter Sparkasse",
+                        List.of(first, duplicate, other)
+                )
+        )));
+
+        List<BankTransaction> transactions = transactionRepository.findAll();
+        assertThat(transactions).hasSize(2);
+        assertThat(transactions).extracting(BankTransaction::getPurpose)
+                .containsExactlyInAnyOrder("Netflix", "Einkauf");
     }
 
     private static String connectionIdFrom(MvcResult result) throws Exception {

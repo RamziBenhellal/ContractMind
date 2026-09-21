@@ -24,7 +24,8 @@ def confirm_bank_connection(payload: ConfirmTanRequest):
 
 @router.get("/bank-connection/{connection_id}/transactions")
 def get_bank_transactions(connection_id: str):
-    return connector.fetch_transactions(connection_id)
+    fetched = connector.fetch_transactions(connection_id)
+    return fetched.model_dump(by_alias=True, mode="json")
 
 
 @router.get("/fints/banks/search")

@@ -1,8 +1,6 @@
 package com.ramzi.backend.service;
 
-import com.ramzi.backend.dto.ContractDto;
 import com.ramzi.backend.dto.IncomeDto;
-import com.ramzi.backend.entity.Contract;
 import com.ramzi.backend.entity.Income;
 import com.ramzi.backend.entity.User;
 import com.ramzi.backend.repository.IncomeRepository;
@@ -10,6 +8,7 @@ import com.ramzi.backend.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,16 +16,16 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class IncomeService {
 
-    private IncomeRepository incomeRepository;
-    private UserRepository userRepository;
+    private final IncomeRepository incomeRepository;
+    private final UserRepository userRepository;
+    private final BankCalendarService calendarService;
 
     public List<IncomeDto> getAllIncomesForUser(String email) {
         List<Income> incomes = incomeRepository.findByUser_Email(email);
         return incomes.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public IncomeDto addIncomeManually(String email,IncomeDto incomeDto) {
-
+    public IncomeDto addIncomeManually(String email, IncomeDto incomeDto) {
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Nutzer nicht gefunden"));
 
@@ -37,6 +36,7 @@ public class IncomeService {
         newIncome.setUser(currentUser);
 
         Income income = incomeRepository.save(newIncome);
+        calendarService.ensureIncomeEntry(currentUser, income, LocalDate.now());
         return mapToDto(income);
     }
 
@@ -47,8 +47,8 @@ public class IncomeService {
         income.setSource(updatedIncome.getSource());
         income.setPaydayOfMonth(updatedIncome.getPaydayOfMonth());
 
-        Income savedIncome =  incomeRepository.save(income);
-
+        Income savedIncome = incomeRepository.save(income);
+        calendarService.ensureIncomeEntry(savedIncome.getUser(), savedIncome, LocalDate.now());
         return mapToDto(savedIncome);
     }
 
@@ -60,5 +60,4 @@ public class IncomeService {
                 .paydayOfMonth(income.getPaydayOfMonth())
                 .build();
     }
-
 }

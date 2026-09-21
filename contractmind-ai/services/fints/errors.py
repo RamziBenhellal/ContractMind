@@ -30,6 +30,22 @@ def bank_unreachable(message: str | None = None) -> FinTsError:
     )
 
 
+def tan_required(message: str | None = None) -> FinTsError:
+    return FinTsError(
+        "TAN_REQUIRED",
+        message or "Die Bank verlangt eine neue TAN. Bitte die Verbindung erneut bestätigen.",
+        409,
+    )
+
+
+def decryption_error(message: str | None = None) -> FinTsError:
+    return FinTsError(
+        "DECRYPTION_ERROR",
+        message or "Gespeicherte Zugangsdaten konnten nicht entschlüsselt werden.",
+        500,
+    )
+
+
 def search_failed() -> FinTsError:
     return FinTsError("SEARCH_FAILED", "Die Banksuche ist fehlgeschlagen.", 502)
 

@@ -7,7 +7,14 @@ export interface BankAccount {
   id?: number;
   accountName?: string;
   bankName?: string;
+  lastSyncedAt?: string | null;
   balanceHistory?: Record<string,number>
+}
+
+export interface SyncNowResponse {
+  syncedAt: string;
+  newTransactionCount: number;
+  updatedBalance: number;
 }
 @Injectable({
   providedIn: 'root',
@@ -41,6 +48,7 @@ export class BankAccountService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-
-
+  syncNow(id: number): Observable<SyncNowResponse> {
+    return this.http.post<SyncNowResponse>(`${this.apiUrl}/${id}/sync-now`, {});
+  }
 }

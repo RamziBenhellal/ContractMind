@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -161,6 +161,7 @@ def test_confirm_tan_persists_only_ciphertext(tmp_path):
 
     assert confirmed.accounts[0].iban == "DE89370400440532013000"
     assert confirmed.accounts[0].balance == Decimal("1420.50")
+    assert confirmed.accounts[0].transactions[0].purpose == "Netflix"
     stored = store.get_connection(started.session_id)
     assert stored is not None
     assert stored.status == "ACTIVE"
@@ -187,6 +188,39 @@ def test_fetch_transactions_normalizes_and_forwards_to_spring(tmp_path):
     assert tx.counterpart_iban == "DE02120300000000202051"
     assert tx.booking_date == date(2026, 9, 18)
     assert spring.calls[0][0] == started.session_id
+
+
+def test_fetch_transactions_queries_each_month_separately(tmp_path):
+    class RecordingClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.windows: list[tuple[date | None, date | None]] = []
+
+        def get_transactions(self, account, start_date=None, end_date=None):
+            self.windows.append((start_date, end_date))
+            return super().get_transactions(account, start_date, end_date)
+
+    client = RecordingClient()
+    cipher = CredentialCipher("unit-test-fints-key")
+    store = ConnectionStore(cipher, data_dir=str(tmp_path))
+    connector = FinTsConnector(
+        cipher=cipher,
+        store=store,
+        client_factory=FakeFactory(client),
+        spring_client=FakeSpring(),
+        lookback_days=90,
+    )
+    started = connector.start_connection(
+        StartConnectionRequest(blz="50050201", loginId="user1", pin="secret-pin")
+    )
+    connector.confirm_tan(started.session_id, "921", "123456")
+    client.windows.clear()
+    fetched = connector.fetch_transactions(started.session_id)
+
+    assert len(client.windows) >= 3
+    assert client.windows[0][0] <= date.today() - timedelta(days=80)
+    assert client.windows[-1][1] == date.today()
+    assert len(fetched.accounts[0].transactions) == 1
 
 
 def test_sync_returns_shared_transaction_format(tmp_path):

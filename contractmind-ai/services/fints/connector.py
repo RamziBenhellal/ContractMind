@@ -25,10 +25,12 @@ from services.fints.crypto import CredentialCipher
 from services.fints.errors import (
     FinTsError,
     bank_unreachable,
+    decryption_error,
     invalid_pin,
     not_found,
     tan_expired,
     tan_invalid,
+    tan_required,
 )
 from services.fints.normalize import normalize_transaction
 from services.fints.spring_client import SpringClassificationClient
@@ -238,9 +240,7 @@ class FinTsConnector:
                             "Die Freigabe ist in der App noch nicht bestätigt. "
                             "Bitte in der S-pushTAN-App bestätigen und danach hier erneut auf Bestätigen tippen."
                         )
-                accounts = self._accounts_from_result(result, session.bank_name)
-                if accounts is None:
-                    accounts = self._load_accounts(client, session.bank_name, include_transactions=False)
+                accounts = self._load_accounts(client, session.bank_name, include_transactions=True)
         except FinTsError:
             raise
         except Exception as exc:
@@ -267,23 +267,27 @@ class FinTsConnector:
         self._store.pop_session(session.session_id)
         return ConfirmTanResponse(
             connection_id=session.session_id,
-            accounts=[
-                FinTsAccount(
-                    iban=account.iban,
-                    account_type=account.account_type,
-                    balance=account.balance,
-                    bank_name=account.bank_name,
-                )
-                for account in accounts
-            ],
+            accounts=accounts,
         )
 
     def fetch_transactions(self, connection_id: str) -> TransactionFetchResponse:
         connection = self._store.get_connection(connection_id)
         if connection is None:
             raise not_found()
-        credentials = self._cipher.decrypt_json(connection.credentials_ciphertext)
-        accounts = self._sync_with_credentials(credentials, connection.bank_name, connection.client_state_ciphertext)
+        try:
+            credentials = self._cipher.decrypt_json(connection.credentials_ciphertext)
+        except ValueError as exc:
+            logger.exception("Entschlüsselung fehlgeschlagen für connection_id=%s", connection_id)
+            raise decryption_error() from exc
+        try:
+            accounts = self._sync_with_credentials(
+                credentials, connection.bank_name, connection.client_state_ciphertext
+            )
+        except FinTsError:
+            raise
+        except Exception as exc:
+            logger.exception("fetch_transactions fehlgeschlagen für connection_id=%s", connection_id)
+            raise _map_client_error(exc) from exc
         forwarded = self._spring.forward_transactions(connection_id, accounts)
         return TransactionFetchResponse(
             connection_id=connection_id,
@@ -310,7 +314,7 @@ class FinTsConnector:
                 pending = getattr(client, "init_tan_response", None)
                 if _is_need_tan(pending):
                     # PSD2: chipTAN/pushTAN können hier nicht server-seitig abgeschlossen werden.
-                    raise bank_unreachable(
+                    raise tan_required(
                         "Die Bank verlangt eine TAN (chipTAN/pushTAN). Bitte die Verbindung neu bestätigen."
                     )
                 return self._load_accounts(client, bank_name, include_transactions=True)
@@ -334,12 +338,7 @@ class FinTsConnector:
             balance = _balance_of(_safe_call(client, "get_balance", account))
             transactions = []
             if include_transactions:
-                raw = client.get_transactions(account, start_date=start, end_date=end)
-                if _is_need_tan(raw):
-                    raise bank_unreachable(
-                        "Kontoauszug erfordert eine TAN (chipTAN/pushTAN) – kein reiner API-Call."
-                    )
-                transactions = [normalize_transaction(item) for item in (raw or [])]
+                transactions = self._collect_transactions(client, account, start, end)
             synced.append(
                 SyncedAccount(
                     iban=iban,
@@ -350,6 +349,33 @@ class FinTsConnector:
                 )
             )
         return synced
+
+    def _collect_transactions(
+        self,
+        client: FinTsBankClient,
+        account: Any,
+        start: date,
+        end: date,
+    ) -> list:
+        """Sparkasse/FinTS liefern oft nur ein Auszugsfenster pro Request — deshalb monatsweise abfragen."""
+        collected = []
+        seen: set[str] = set()
+        window_start = start
+        while window_start <= end:
+            window_end = min(_end_of_month(window_start), end)
+            raw = client.get_transactions(account, start_date=window_start, end_date=window_end)
+            if not _is_need_tan(raw):
+                for item in raw or []:
+                    tx = normalize_transaction(item)
+                    key = tx.external_id or f"{tx.booking_date}|{tx.amount}|{tx.purpose}|{tx.counterpart_iban}"
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    collected.append(tx)
+            if window_end >= end:
+                break
+            window_start = window_end + timedelta(days=1)
+        return collected
 
     def _create_client(self, blz: str, login_id: str, pin: str, server: str, from_data: bytes | None = None):
         return self._factory.create(blz, login_id, pin, server, from_data=from_data)
@@ -463,6 +489,12 @@ def _challenge_hint(
     if "chiptan" in name or "flicker" in name:
         return "Erzeuge jetzt die TAN am Generator und gib sie hier ein."
     return "Gib die TAN ein, die dein gewähltes Verfahren jetzt anzeigt."
+
+
+def _end_of_month(day: date) -> date:
+    if day.month == 12:
+        return date(day.year, 12, 31)
+    return date(day.year, day.month + 1, 1) - timedelta(days=1)
 
 
 def _is_need_tan(result: Any) -> bool:

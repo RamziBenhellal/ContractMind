@@ -20,4 +20,8 @@ public interface BankCalendarEntryRepository extends JpaRepository<BankCalendarE
     boolean existsBySourceContract_Id(Long contractId);
 
     boolean existsBySourceIncome_Id(Long incomeId);
+
+    java.util.Optional<BankCalendarEntry> findBySourceContract_Id(Long contractId);
+
+    java.util.Optional<BankCalendarEntry> findBySourceIncome_Id(Long incomeId);
 }

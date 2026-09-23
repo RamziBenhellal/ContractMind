@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:contractmind;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+gocardless:
+  api:
+    url: http://localhost:9
+  secret:
+    id: test
+    key: test
+
+ai-service:
+  url: http://localhost:9
+  timeout-ms: 500
+  retry:
+    max-attempts: 2
+    backoff-ms: 50
+
+jwt:
+  secret: test-only-jwt-secret
+
+fints:
+  service:
+    url: http://localhost:9
+  encryption-key: test-only-fints-key
+  internal-token: test-internal
+  sync:
+    enabled: false
+    min-interval: 5m
+    timeout: 15s

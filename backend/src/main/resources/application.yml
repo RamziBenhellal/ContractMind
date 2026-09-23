@@ -13,6 +13,14 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  jackson:
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
   servlet:
     multipart:
       max-file-size: 10MB
@@ -20,6 +28,36 @@ spring:
 
 contractmind:
   upload-dir: uploads/contracts
+
 # Custom Settings für den KI-Service
 ai-service:
-  url: http://localhost:8000  # Adresse des Python FastAPI Dienstes
+  url: http://localhost:8000
+  timeout-ms: 3000
+  retry:
+    max-attempts: 2
+    backoff-ms: 200
+
+# GoCardless API Credentials
+gocardless:
+  api:
+    url: https://bankaccountdata.gocardless.com/api/v2
+  secret:
+    id: ContractMind
+    key: live_iNfqglAuUXTKAkW7vG7-vMqsMolEJhlvrnZ5yNt9
+
+# Stabiles JWT-Secret (nicht pro Restart neu würfeln — sonst 403 ohne Body im Frontend).
+jwt:
+  secret: ${JWT_SECRET:dev-only-jwt-secret-change-me}
+
+# Python FinTS-Service + AES-Schlüssel für gespeicherte Zugangsdaten.
+# FINTS_ENCRYPTION_KEY kommt aus der Umgebung oder später aus Vault.
+fints:
+  service:
+    url: ${FINTS_SERVICE_URL:http://localhost:8000}
+  encryption-key: ${FINTS_ENCRYPTION_KEY:dev-only-not-for-production}
+  internal-token: ${FINTS_INTERNAL_TOKEN:dev-internal}
+  sync:
+    enabled: true
+    cron: "0 0 */6 * * *"
+    min-interval: 5m
+    timeout: 15s

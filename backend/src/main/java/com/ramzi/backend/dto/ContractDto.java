@@ -21,5 +21,6 @@ public class ContractDto {
     private LocalDate endDate;
     private String filePath;
     private String status;
+    private Integer dueDayOfMonth;
 
 }

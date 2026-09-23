@@ -1,0 +1,60 @@
+<div class="glass-panel calendar-widget">
+
+  <div class="calendar-header">
+    <h3>🗓️ Dein Finanz-Kalender</h3>
+    <p>So entwickelt sich dein Geld diesen Monat</p>
+
+    <!-- Die Monats-Zusammenfassung oben -->
+    <div class="summary-pills">
+      <div class="pill green">↓ +{{ totalIncome }} €</div>
+      <div class="pill red">↑ -{{ totalExpenses }} €</div>
+      <div class="pill blue">Rest: {{ monthlyRemaining }} €</div>
+    </div>
+  </div>
+
+  <div class="timeline-container">
+
+    <!-- Wenn keine Daten da sind -->
+    @if (timelineDays.length === 0) {
+      <div class="empty-state">Noch keine Zahlungen für diesen Monat geplant.</div>
+    }
+
+    <!-- Die vertikale Linie mit den Events -->
+    <div class="timeline">
+      @for (tDay of timelineDays; track tDay.day) {
+
+        <div class="timeline-item">
+          <!-- Der leuchtende Punkt auf der Zeitlinie -->
+          <div class="timeline-dot" [class.positive]="tDay.dailyBalance >= 0" [class.negative]="tDay.dailyBalance < 0"></div>
+
+          <div class="timeline-content glass-panel-light">
+
+            <div class="day-header">
+              <span class="day-number">{{ tDay.day }}. des Monats</span>
+              <span class="running-total">Saldo: <strong>{{ tDay.runningTotal }} €</strong></span>
+            </div>
+
+            <!-- Einkommen an diesem Tag anzeigen -->
+            @for (income of tDay.incomes; track income.id) {
+              <div class="event-row income-row">
+                <span class="event-name">💰 {{ income.source }}</span>
+                <span class="event-amount">+ {{ income.amount }} €</span>
+              </div>
+            }
+
+            <!-- Abbuchungen an diesem Tag anzeigen -->
+            @for (contract of tDay.contracts; track contract.id) {
+              <div class="event-row contract-row">
+                <span class="event-name">📄 {{ contract.provider }}</span>
+                <span class="event-amount">- {{ contract.monthlyCost }} €</span>
+              </div>
+            }
+
+          </div>
+        </div>
+
+      }
+    </div>
+
+  </div>
+</div>

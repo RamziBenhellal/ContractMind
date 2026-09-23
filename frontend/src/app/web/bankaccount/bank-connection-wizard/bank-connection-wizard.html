@@ -1,0 +1,214 @@
+<div class="glass-panel wizard">
+
+  <header class="wizard-head">
+    <h2>🏦 Bank verbinden</h2>
+
+    <ol class="stepper">
+      @for (key of stepOrder; track key; let i = $index) {
+        <li
+          class="stepper-item"
+          [class.is-active]="i === currentStepIndex()"
+          [class.is-done]="i < currentStepIndex()">
+          <span class="stepper-dot">{{ i < currentStepIndex() ? '✓' : i + 1 }}</span>
+          <span class="stepper-label">{{ stepLabels[key] }}</span>
+        </li>
+      }
+    </ol>
+  </header>
+
+  @if (error(); as err) {
+    <div class="wizard-error" role="alert" [attr.data-error-code]="err.code" data-testid="wizard-error">
+      <span class="error-icon">⚠️</span>
+      <span class="error-text">{{ err.message }}</span>
+    </div>
+  }
+
+  @switch (step()) {
+
+    <!-- ============ SCHRITT 1: BANK SUCHEN ============ -->
+    @case ('bank-search') {
+      <section class="wizard-step" data-testid="step-bank-search">
+        <div class="premium-input-group">
+          <label for="bank-query">Bank suchen</label>
+          <input
+            id="bank-query"
+            class="ultra-modern-input"
+            type="text"
+            autocomplete="off"
+            placeholder="Bankname oder Bankleitzahl"
+            data-testid="bank-search-input"
+            [ngModel]="bankQuery()"
+            (ngModelChange)="onQueryChange($event)">
+        </div>
+
+        @if (searching()) {
+          <p class="wizard-hint" data-testid="bank-search-loading">Suche läuft …</p>
+        }
+
+        @if (bankResults().length > 0) {
+          <ul class="result-list" data-testid="bank-results">
+            @for (result of bankResults(); track result.blz) {
+              <li>
+                <button type="button" class="result-item" (click)="selectBank(result)">
+                  <span class="result-name">{{ result.name }}</span>
+                  <span class="result-blz">BLZ {{ result.blz }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else if (!searching() && bankQuery().trim().length >= 2) {
+          <p class="wizard-hint" data-testid="bank-search-empty">Keine Bank gefunden.</p>
+        }
+      </section>
+    }
+
+    <!-- ============ SCHRITT 2: ZUGANGSDATEN ============ -->
+    @case ('credentials') {
+      <section class="wizard-step" data-testid="step-credentials">
+        <p class="chosen-bank">Gewählte Bank: <strong>{{ bank()?.name }}</strong></p>
+
+        <form (ngSubmit)="submitCredentials()">
+          <div class="premium-input-group">
+            <label for="login-id">Kontonummer / Login-ID</label>
+            <input
+              id="login-id"
+              name="loginId"
+              class="ultra-modern-input"
+              type="text"
+              autocomplete="username"
+              data-testid="login-id-input"
+              [ngModel]="loginId()"
+              (ngModelChange)="loginId.set($event)">
+          </div>
+
+          <div class="premium-input-group">
+            <label for="pin">PIN</label>
+            <input
+              id="pin"
+              name="pin"
+              class="ultra-modern-input"
+              type="password"
+              autocomplete="current-password"
+              data-testid="pin-input"
+              [ngModel]="pin()"
+              (ngModelChange)="pin.set($event)">
+          </div>
+
+          <div class="wizard-actions">
+            <button type="button" class="glass-btn" (click)="back()" [disabled]="busy()">Zurück</button>
+            <button
+              type="submit"
+              class="premium-save-btn"
+              data-testid="credentials-submit"
+              [disabled]="busy() || !credentialsValid()">
+              {{ busy() ? 'Verbinde …' : 'Anmelden' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <!-- ============ SCHRITT 3: TAN-VERFAHREN ============ -->
+    @case ('tan-method') {
+      <section class="wizard-step" data-testid="step-tan-method">
+        <p class="wizard-hint">Deine Bank bietet mehrere TAN-Verfahren an. Womit möchtest du bestätigen?</p>
+
+        <div class="radio-list">
+          @for (method of tanMethods(); track method.id) {
+            <label class="radio-row" [class.is-selected]="pendingTanMethod()?.id === method.id">
+              <input
+                type="radio"
+                name="tanMethod"
+                [value]="method.id"
+                [checked]="pendingTanMethod()?.id === method.id"
+                (change)="selectTanMethod(method)">
+              <span class="radio-text">
+                <span class="radio-title">{{ method.name }}</span>
+                @if (method.hint) {
+                  <span class="radio-hint">{{ method.hint }}</span>
+                }
+              </span>
+            </label>
+          }
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="glass-btn" (click)="back()" [disabled]="busy()">Zurück</button>
+          <button
+            type="button"
+            class="premium-save-btn"
+            data-testid="tan-method-submit"
+            [disabled]="!pendingTanMethod()"
+            (click)="confirmTanMethod()">
+            Weiter
+          </button>
+        </div>
+      </section>
+    }
+
+    <!-- ============ SCHRITT 4: TAN EINGEBEN ============ -->
+    @case ('tan-entry') {
+      <section class="wizard-step" data-testid="step-tan-entry">
+        <p class="tan-hint" data-testid="tan-hint">{{ tanHint() }}</p>
+
+        <form (ngSubmit)="submitTan()">
+          @if (!tanDecoupled()) {
+            <div class="premium-input-group">
+              <label for="tan">TAN</label>
+              <input
+                id="tan"
+                name="tan"
+                class="ultra-modern-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                data-testid="tan-input"
+                [ngModel]="tan()"
+                (ngModelChange)="tan.set($event)">
+            </div>
+          }
+
+          <div class="wizard-actions">
+            <button type="button" class="glass-btn" (click)="back()" [disabled]="busy()">Zurück</button>
+            <button
+              type="submit"
+              class="premium-save-btn"
+              data-testid="tan-submit"
+              [disabled]="busy() || !tanValid()">
+              {{ busy() ? 'Prüfe …' : 'Bestätigen' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <!-- ============ SCHRITT 5: ERFOLG ============ -->
+    @case ('success') {
+      <section class="wizard-step" data-testid="step-success">
+        <div class="success-head">
+          <span class="success-icon">✅</span>
+          <h3>Verbindung hergestellt</h3>
+          <p class="wizard-hint">Diese Konten haben wir bei {{ bank()?.name }} gefunden:</p>
+        </div>
+
+        <ul class="account-list" data-testid="account-list">
+          @for (account of accounts(); track account.iban) {
+            <li class="account-row">
+              <span class="account-iban">{{ maskIban(account.iban) }}</span>
+              <span class="account-type">{{ account.accountType }}</span>
+              <span class="account-balance" [class.negative]="account.balance < 0">
+                {{ account.balance | number:'1.2-2' }} €
+              </span>
+            </li>
+          }
+        </ul>
+
+        <div class="wizard-actions">
+          <button type="button" class="glass-btn" data-testid="restart" (click)="restart()">
+            Weitere Bank verbinden
+          </button>
+        </div>
+      </section>
+    }
+  }
+</div>

@@ -1,0 +1,281 @@
+<div class="glass-panel calendar-wrapper">
+  <div class="available-banner" data-testid="available-balance">
+    <div>
+      <p class="banner-label">Aktueller Kontostand</p>
+      <h2 data-testid="current-balance">{{ available()?.currentBalance ?? 0 | number:'1.2-2' }} €</h2>
+    </div>
+    <div class="banner-meta">
+      <span data-testid="available-forecast">
+        Verfügbar {{ available()?.availableBalance ?? 0 | number:'1.2-2' }} €
+      </span>
+      <span class="income">+ {{ available()?.expectedIncome ?? 0 | number:'1.2-2' }} €</span>
+      <span class="charge">− {{ available()?.outstandingCharges ?? 0 | number:'1.2-2' }} €</span>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="error-glass-box">{{ error() }}</div>
+  }
+
+  <div class="sync-bar">
+    <span class="last-synced" data-testid="last-synced">{{ lastSyncedLabel() }}</span>
+    <button
+      type="button"
+      class="sync-now-btn"
+      data-testid="sync-now"
+      [disabled]="syncDisabled()"
+      [attr.aria-busy]="syncing()"
+      (click)="refreshNow()">
+      @if (syncing()) {
+        <span class="sync-spinner" data-testid="sync-spinner" aria-hidden="true"></span>
+        Aktualisieren…
+      } @else if (retryAfterSeconds() > 0) {
+        <span data-testid="sync-countdown">Nächster Sync in {{ retryAfterSeconds() }}s</span>
+      } @else {
+        Jetzt aktualisieren
+      }
+    </button>
+  </div>
+
+  @if (sparkline().points.length) {
+    <div class="sparkline-card" data-testid="balance-sparkline">
+      <div class="sparkline-head">
+        <span>Kontostand</span>
+        <span class="sparkline-legend">
+          <i class="legend-ist"></i> Ist
+          <i class="legend-prognose"></i> Prognose
+        </span>
+      </div>
+      <svg viewBox="0 0 320 56" role="img" aria-label="Kontostand Ist und Prognose">
+        <path class="spark-ist" data-testid="spark-ist" [attr.d]="sparkline().actual" fill="none" />
+        <path class="spark-prognose" data-testid="spark-prognose" [attr.d]="sparkline().forecast" fill="none" />
+      </svg>
+    </div>
+  }
+
+  <div class="month-navigation">
+    <button class="nav-btn" (click)="changeMonth(-1)">❮ Letzter</button>
+    <h2>{{ monthNames[currentMonth] }} {{ currentYear }}</h2>
+    <button class="nav-btn" (click)="changeMonth(1)">Nächster ❯</button>
+  </div>
+
+  @if (upcomingEntries().length) {
+    <aside class="upcoming-panel" data-testid="upcoming-entries">
+      <h3>Nächste Termine</h3>
+      <ul class="upcoming-list">
+        @for (entry of upcomingEntries(); track (entry.sourceEntryId ?? entry.title) + '-' + entry.date) {
+          <li
+            class="upcoming-item"
+            [class.tone-charge]="entryTone(entry.type) === 'charge'"
+            [class.tone-income]="entryTone(entry.type) === 'income'"
+            [attr.data-testid]="'upcoming-' + entry.title"
+            [attr.data-tone]="entryTone(entry.type)">
+            <span class="upcoming-dot" aria-hidden="true"></span>
+            <span class="upcoming-title">{{ entry.title }}</span>
+            <span class="upcoming-date">{{ entry.date }}</span>
+            <strong class="upcoming-amount">{{ entry.amount | number:'1.2-2' }} €</strong>
+          </li>
+        }
+      </ul>
+    </aside>
+  }
+
+  <div class="calendar-grid" data-testid="calendar-grid">
+    @for (day of weekDays; track day) {
+      <div class="weekday-header">{{ day }}</div>
+    }
+
+    @for (day of calendarGrid; track day.dateString) {
+      <div
+        class="calendar-cell"
+        [class.not-current-month]="!day.isCurrentMonth"
+        [class.zone-ist]="day.isCurrentMonth && zoneFor(day.dateString) === 'ist'"
+        [class.zone-prognose]="day.isCurrentMonth && zoneFor(day.dateString) === 'prognose'"
+        [class.is-today]="day.dateString === today()"
+        [class.last-ist]="day.isLastIst"
+        [class.is-active]="selectedDay()?.dateString === day.dateString"
+        [attr.data-testid]="'day-' + day.dateString"
+        [attr.data-zone]="day.isCurrentMonth ? zoneFor(day.dateString) : 'outside'"
+        (click)="selectDay(day)">
+        <div class="cell-header">
+          <span class="day-number">{{ day.dayOfMonth }}</span>
+          @if (day.isCurrentMonth) {
+            <span class="zone-badge" [attr.data-testid]="'zone-' + day.dateString">
+              {{ zoneFor(day.dateString) === 'ist' ? 'IST' : 'Prognose' }}
+            </span>
+          }
+        </div>
+        @if (day.isCurrentMonth && markerDots(day).length) {
+          <div
+            class="entry-markers"
+            [attr.data-testid]="'markers-' + day.dateString"
+            [attr.data-charges]="markersFor(day).charges"
+            [attr.data-incomes]="markersFor(day).incomes"
+            [attr.aria-label]="markerSummary(day)">
+            @for (tone of markerDots(day); track $index) {
+              <i class="marker-dot" [class.charge]="tone === 'charge'" [class.income]="tone === 'income'" [attr.data-tone]="tone" aria-hidden="true"></i>
+            }
+            @if (markerDots(day).length > 1) {
+              <span class="marker-badge" data-testid="marker-badge">{{ markerSummary(day) }}</span>
+            }
+          </div>
+        }
+        <div class="entry-list">
+          @for (entry of visibleCellEntries(day); track entry.key) {
+            <div
+              class="entry-chip"
+              [class.prognose]="entry.dashed"
+              [class.ist]="!entry.dashed"
+              [class.income]="entry.tone === 'income'"
+              [class.charge]="entry.tone === 'charge'"
+              [attr.data-testid]="'entry-' + entry.title"
+              [attr.data-tone]="entry.tone">
+              <span class="chip-title">{{ entry.title }}</span>
+              <strong class="chip-amount">{{ entry.amount | number:'1.2-2' }} €</strong>
+            </div>
+          }
+          @if (hasCellOverflow(day)) {
+            <button
+              type="button"
+              class="cell-more"
+              data-testid="cell-more"
+              [attr.aria-label]="overflowEntryCount(day) + ' weitere Einträge anzeigen'"
+              (click)="selectDay(day); $event.stopPropagation()">
+              <span class="cell-more-icon" aria-hidden="true">⧉</span>
+              <span>+{{ overflowEntryCount(day) }} mehr</span>
+            </button>
+          }
+        </div>
+        @if (day.isCurrentMonth && cellBalance(day) !== null) {
+          <div class="cell-balance" [attr.data-testid]="'balance-' + day.dateString">
+            <span class="balance-label">Kontostand</span>
+            <strong>{{ cellBalance(day) | number:'1.2-2' }} €</strong>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <p class="entry-type-legend" data-testid="entry-type-legend">
+    <i class="legend-dot charge" aria-hidden="true"></i> Rot = Abbuchung
+    <i class="legend-dot income" aria-hidden="true"></i> Grün = Einkommen
+  </p>
+
+  @if (selectedDay(); as day) {
+    <div class="modal-backdrop" data-testid="day-popup" (click)="closeDayPopup()">
+      <section
+        class="modal-content day-detail"
+        data-testid="day-detail"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-labelledby]="'day-popup-title'"
+        (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 id="day-popup-title">{{ day.dateString }}</h3>
+          <span class="zone-badge" [class.prognose]="zoneFor(day.dateString) === 'prognose'">
+            {{ zoneFor(day.dateString) === 'ist' ? 'IST' : 'Prognose' }}
+          </span>
+          <button type="button" class="close-modal-btn" aria-label="Schließen" (click)="closeDayPopup()">✖</button>
+        </div>
+        <div class="modal-body">
+          <p class="detail-balance">
+            {{ day.dateString < today() ? 'Kontostand an diesem Tag:' : 'Aktueller Kontostand:' }}
+            <strong>{{ cellBalance(day) ?? 0 | number:'1.2-2' }} €</strong>
+          </p>
+
+          @if (day.dateString <= today()) {
+            @if (!day.balancesByAccount.length && !day.actualGroups.length && !day.projectedEntries.length) {
+              <p class="empty-hint">Keine realen Umsätze an diesem Tag.</p>
+            }
+            @for (account of day.balancesByAccount; track account.accountId) {
+              <article class="account-block">
+                <h4>{{ account.accountName }} · {{ account.actualBalance | number:'1.2-2' }} €</h4>
+                @for (tx of transactionsFor(account.accountId, day); track tx.id) {
+                  <div class="detail-row">
+                    <span>{{ tx.purpose || tx.counterpartyName || 'Umsatz' }}</span>
+                    <strong [class.income]="tx.amount > 0" [class.charge]="tx.amount < 0">
+                      {{ tx.amount | number:'1.2-2' }} €
+                    </strong>
+                  </div>
+                }
+                @if (!transactionsFor(account.accountId, day).length) {
+                  <p class="empty-hint">Keine Umsätze an diesem Tag.</p>
+                }
+              </article>
+            }
+            @if (!day.balancesByAccount.length) {
+              @for (group of day.actualGroups; track group.accountId) {
+                <article class="account-block">
+                  <h4>{{ group.accountName }} · {{ group.actualBalance | number:'1.2-2' }} €</h4>
+                  @for (tx of group.transactions; track tx.id) {
+                    <div class="detail-row">
+                      <span>{{ tx.purpose || tx.counterpartyName || 'Umsatz' }}</span>
+                      <strong [class.income]="tx.amount > 0" [class.charge]="tx.amount < 0">
+                        {{ tx.amount | number:'1.2-2' }} €
+                      </strong>
+                    </div>
+                  }
+                </article>
+              }
+            }
+            @if (day.projectedEntries.length) {
+              <h4>Geplante Einträge</h4>
+              @for (entry of day.projectedEntries; track (entry.sourceEntryId ?? entry.title) + '-' + entry.date + '-' + entry.type) {
+                <div
+                  class="detail-row"
+                  [attr.data-testid]="'detail-entry-' + entry.title"
+                  [attr.data-tone]="entryTone(entry.type)">
+                  <span>{{ entry.title }}</span>
+                  <strong [class.income]="entry.type === 'INCOME'" [class.charge]="entry.type === 'CONTRACT_PAYMENT'">
+                    {{ entry.amount | number:'1.2-2' }} €
+                  </strong>
+                </div>
+              }
+            }
+          } @else {
+            @if (!day.projectedEntries.length) {
+              <p class="empty-hint">Keine prognostizierten Einträge an diesem Tag.</p>
+            }
+            @for (entry of day.projectedEntries; track (entry.sourceEntryId ?? entry.title) + '-' + entry.date + '-' + entry.type) {
+              <div
+                class="detail-row"
+                [attr.data-testid]="'detail-entry-' + entry.title"
+                [attr.data-tone]="entryTone(entry.type)">
+                <span>{{ entry.title }}</span>
+                <strong [class.income]="entry.type === 'INCOME'" [class.charge]="entry.type === 'CONTRACT_PAYMENT'">
+                  {{ entry.amount | number:'1.2-2' }} €
+                </strong>
+              </div>
+            }
+          }
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (toast()) {
+    <div class="sync-toast" data-testid="sync-toast" role="status">{{ toast() }}</div>
+  }
+
+  @if (reauthOpen()) {
+    <div class="modal-backdrop" data-testid="reauth-modal" (click)="closeReauth()">
+      <section
+        class="modal-content day-detail"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reauth-title"
+        (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 id="reauth-title">Bankverbindung bestätigen</h3>
+          <button type="button" class="close-modal-btn" aria-label="Schließen" (click)="closeReauth()">✖</button>
+        </div>
+        <div class="modal-body">
+          <p>Die Bank verlangt eine erneute Anmeldung. Bitte verbinde dein Konto im Assistenten neu.</p>
+          <button type="button" class="sync-now-btn" data-testid="reauth-wizard" (click)="goToReauth()">
+            Jetzt neu verbinden
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</div>

@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,7 +20,7 @@ public class ContractService {
     private final ContractRepository contractRepository;
     private final UserRepository userRepository;
     private final AiIntegrationService aiIntegrationService;
-
+    private final BankCalendarService calendarService;
 
     public List<ContractDto> getAllContractsForUser(String email) {
         List<Contract> contracts = contractRepository.findByUser_Email(email);
@@ -34,15 +35,14 @@ public class ContractService {
                 .monthlyCost(contract.getMonthlyCost())
                 .endDate(contract.getEndDate())
                 .status(contract.getStatus())
+                .dueDayOfMonth(contract.getDueDayOfMonth())
                 .build();
     }
 
     public ContractDto addContractAi(String email, String filePath) {
-        // 2. Nutzer holen
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Nutzer nicht gefunden"));
 
-        // 3. Einen "leeren" Vertragsobjekt-Platzhalter erstellen
         Contract pendingContract = Contract.builder()
                 .filePath(filePath)
                 .status("WAITING_FOR_AI")
@@ -52,19 +52,15 @@ public class ContractService {
                 .user(currentUser)
                 .build();
 
-        // 4. In die Datenbank speichern
-
-        Contract savedContract =  contractRepository.save(pendingContract);
+        Contract savedContract = contractRepository.save(pendingContract);
 
         aiIntegrationService.analyzeAndProcessContract(savedContract.getId(), filePath);
         System.out.println(pendingContract.getStatus());
 
-
         return mapToDto(pendingContract);
     }
 
-    public ContractDto addContractManually(String email,ContractDto contractDto) {
-
+    public ContractDto addContractManually(String email, ContractDto contractDto) {
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Nutzer nicht gefunden"));
 
@@ -73,12 +69,12 @@ public class ContractService {
         newContract.setContractType(contractDto.getContractType());
         newContract.setMonthlyCost(contractDto.getMonthlyCost());
         newContract.setEndDate(contractDto.getEndDate());
-
-        // Da der Nutzer es selbst eingetippt hat, ist es direkt "bestätigt"
+        newContract.setDueDayOfMonth(contractDto.getDueDayOfMonth());
         newContract.setStatus("VERIFIED");
         newContract.setUser(currentUser);
 
         Contract contract = contractRepository.save(newContract);
+        calendarService.ensureContractEntry(currentUser, contract, LocalDate.now());
         return mapToDto(contract);
     }
 
@@ -89,12 +85,11 @@ public class ContractService {
         contract.setContractType(updatedContract.getContractType());
         contract.setMonthlyCost(updatedContract.getMonthlyCost());
         contract.setEndDate(updatedContract.getEndDate());
+        contract.setDueDayOfMonth(updatedContract.getDueDayOfMonth());
         contract.setStatus("VERIFIED");
 
-        Contract savedContract =  contractRepository.save(contract);
-
+        Contract savedContract = contractRepository.save(contract);
+        calendarService.ensureContractEntry(savedContract.getUser(), savedContract, LocalDate.now());
         return mapToDto(savedContract);
     }
-
-
 }

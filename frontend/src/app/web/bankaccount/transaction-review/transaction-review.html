@@ -1,0 +1,118 @@
+<div class="glass-panel review-wrapper">
+  <div class="review-header">
+    <div>
+      <h2>Umsätze prüfen</h2>
+      <p>Diese Zahlungen konnte die KI nicht eindeutig zuordnen.</p>
+    </div>
+    <span class="queue-badge" data-testid="review-count">{{ store.items().length }}</span>
+  </div>
+
+  @if (store.error()) {
+    <div class="error-glass-box" data-testid="review-error">{{ store.error() }}</div>
+  }
+
+  @if (store.items().length === 0 && !store.loading() && !store.error()) {
+    <div class="empty-state" data-testid="review-empty">Keine Umsätze warten auf deine Entscheidung.</div>
+  }
+
+  <div class="review-list" data-testid="review-list">
+    @for (tx of store.items(); track tx.id) {
+      <article class="review-card glass-panel-light" [attr.data-testid]="'review-card-' + tx.id">
+        <div class="card-top">
+          <div>
+            <h3>{{ displayName(tx) }}</h3>
+            <p class="meta">
+              {{ tx.bookingDate || 'ohne Datum' }}
+              @if (tx.counterpartyIban) {
+                · {{ tx.counterpartyIban }}
+              }
+            </p>
+          </div>
+          <div class="amount" [class.income]="tx.amount > 0">
+            {{ tx.amount | number:'1.2-2' }} €
+          </div>
+        </div>
+
+        @if (tx.suggestNewContract) {
+          <div class="hint">Möglicher neuer Vertrag erkannt</div>
+        }
+
+        <div class="action-block">
+          <label>Das ist ein bekannter Vertrag oder ein Einkommen</label>
+          <div class="action-row">
+            <select
+              class="ultra-modern-input"
+              [attr.data-testid]="'match-select-' + tx.id"
+              [ngModel]="selectedMatchId()[tx.id] ?? ''"
+              (ngModelChange)="onMatchChange(tx.id, $event)">
+              <option value="">Bitte wählen</option>
+              @for (option of matchOptions(); track option.kind + '-' + option.id) {
+                <option [ngValue]="option.id">{{ option.kind === 'income' ? 'Einkommen' : 'Vertrag' }}: {{ option.label }}</option>
+              }
+            </select>
+            <button
+              class="premium-save-btn"
+              [attr.data-testid]="'match-submit-' + tx.id"
+              [disabled]="!selectedMatchId()[tx.id] || submittingId() === tx.id"
+              (click)="confirmExistingMatch(tx)">
+              Das ist {{ selectedMatchLabel(tx) }}
+            </button>
+          </div>
+        </div>
+
+        <div class="action-block">
+          <button
+            class="glass-btn"
+            [attr.data-testid]="'new-entity-open-' + tx.id"
+            (click)="openNewEntityForm(tx)">
+            Neuer Vertrag/Einkommen anlegen
+          </button>
+
+          @if (newEntityOpenFor() === tx.id) {
+            <form class="new-entity-form" [attr.data-testid]="'new-entity-form-' + tx.id" (submit)="$event.preventDefault(); submitNewEntity(tx)">
+              <div class="kind-toggle">
+                <button type="button" class="toggle-btn" [class.active]="newEntityKind() === 'NEW_CONTRACT'" (click)="newEntityKind.set('NEW_CONTRACT')">Vertrag</button>
+                <button type="button" class="toggle-btn" [class.active]="newEntityKind() === 'NEW_INCOME'" (click)="newEntityKind.set('NEW_INCOME')">Einkommen</button>
+              </div>
+              <label>Name</label>
+              <input class="ultra-modern-input" data-testid="new-entity-name" [value]="newEntityForm().provider" (input)="patchNewEntity('provider', $any($event.target).value)">
+              <label>Betrag (€)</label>
+              <input class="ultra-modern-input" type="number" step="0.01" data-testid="new-entity-amount" [value]="newEntityForm().monthlyCost" (input)="patchNewEntity('monthlyCost', +$any($event.target).value)">
+              <label>Rhythmus (Tag im Monat)</label>
+              <input class="ultra-modern-input" type="number" min="1" max="31" data-testid="new-entity-day" [value]="newEntityForm().dueDayOfMonth" (input)="patchNewEntity('dueDayOfMonth', +$any($event.target).value)">
+              <div class="action-row">
+                <button type="button" class="glass-btn" (click)="closeNewEntityForm()">Abbrechen</button>
+                <button type="submit" class="premium-save-btn" data-testid="new-entity-submit" [disabled]="submittingId() === tx.id">
+                  Speichern
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+
+        <div class="action-block">
+          <label>Normale Transaktion</label>
+          <div class="action-row">
+            <select
+              class="ultra-modern-input"
+              [attr.data-testid]="'normal-category-' + tx.id"
+              [ngModel]="categoryFor(tx.id)"
+              (ngModelChange)="onCategoryChange(tx.id, $event)">
+              <option value="">Kategorie (optional)</option>
+              @for (category of categories; track category) {
+                <option [value]="category">{{ category }}</option>
+              }
+            </select>
+            <button
+              class="glass-btn"
+              [attr.data-testid]="'normal-submit-' + tx.id"
+              [disabled]="submittingId() === tx.id"
+              (click)="confirmNormal(tx)">
+              Normale Transaktion
+            </button>
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+</div>

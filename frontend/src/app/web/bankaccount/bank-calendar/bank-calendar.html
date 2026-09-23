@@ -1,0 +1,117 @@
+<div class="glass-panel calendar-wrapper">
+
+  <!-- KOPFZEILE: Kontowahl & Aktionen -->
+  <div class="calendar-top-bar">
+    <div class="account-selector">
+      <label>Dein Bankkonto:</label>
+      <select class="ultra-modern-input short-input" [ngModel]="selectedAccount" (ngModelChange)="selectAccount($event)">
+        @for (acc of accounts; track acc.id) {
+          <option [ngValue]="acc">{{ acc.accountName }} {{ acc.bankName ? '(' + acc.bankName + ')' : '' }}</option>
+        }
+      </select>
+      <button class="icon-btn" (click)="isAddAccountModalOpen = true">➕ Konto</button>
+    </div>
+
+    <button class="premium-save-btn" (click)="isUpdateBalanceModalOpen = true" [disabled]="!selectedAccount">
+      ✏️ Kontostand heute eintragen
+    </button>
+  </div>
+
+  <!-- MONAT NAVIGATION -->
+  <div class="month-navigation">
+    <button class="nav-btn" (click)="changeMonth(-1)">❮ Letzter</button>
+    <h2>{{ monthNames[currentMonth] }} {{ currentYear }}</h2>
+    <button class="nav-btn" (click)="changeMonth(1)">Nächster ❯</button>
+  </div>
+
+  <!-- DAS ECHTE KALENDER GRID -->
+  <div class="calendar-grid">
+    <!-- Wochentage -->
+    @for (day of weekDays; track day) {
+      <div class="weekday-header">{{ day }}</div>
+    }
+
+    <!-- Die einzelnen Tage -->
+    @for (day of calendarGrid; track day.dateString) {
+      <div class="calendar-cell" [class.not-current-month]="!day.isCurrentMonth" [class.negative-balance]="day.projectedBalance < 0">
+
+        <div class="cell-header">
+          <span class="day-number">{{ day.dayOfMonth }}</span>
+          @if (day.manualBalance !== undefined) {
+            <span class="manual-badge" title="Manuell erfasster Kontostand">✓ Fix</span>
+          }
+        </div>
+
+        <div class="cell-footer">
+          <span class="projected-balance">{{ day.projectedBalance | number:'1.2-2' }} €</span>
+        </div>
+
+      </div>
+    }
+  </div>
+
+</div>
+
+<!-- ========================================== -->
+<!-- MODALS -->
+<!-- ========================================== -->
+
+<!-- Modal: Neues Konto -->
+@if (isAddAccountModalOpen) {
+  <div class="modal-backdrop" (click)="isAddAccountModalOpen = false">
+    <div class="modal-content glass-panel" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Neues Bankkonto anlegen</h3>
+        <button class="close-modal-btn" (click)="isAddAccountModalOpen = false">✖</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group premium-input-group">
+          <label>Name des Kontos</label>
+          <input type="text" [(ngModel)]="newAccount.accountName" class="ultra-modern-input" placeholder="z.B. Girokonto">
+        </div>
+
+        <div class="form-group premium-input-group mt-3">
+          <label>Bank</label>
+          <input type="text" [(ngModel)]="newAccount.bankName" class="ultra-modern-input" placeholder="z.B. Sparkasse">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="glass-btn cancel-btn" (click)="isAddAccountModalOpen = false">Abbrechen</button>
+        <button class="premium-save-btn" (click)="saveNewAccount()" [disabled]="!newAccount.accountName || !newAccount.bankName">Speichern</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal: Kontostand erfassen -->
+@if (isUpdateBalanceModalOpen) {
+  <div class="modal-backdrop" (click)="isUpdateBalanceModalOpen = false">
+    <div class="modal-content glass-panel" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Tatsächlichen Kontostand eintragen</h3>
+        <button class="close-modal-btn" (click)="isUpdateBalanceModalOpen = false">✖</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group premium-input-group">
+          <label>Datum der Abfrage</label>
+          <input type="date" [(ngModel)]="updateBalanceDate" class="ultra-modern-input">
+        </div>
+        <div class="form-group premium-input-group mt-3">
+          <label>Aktueller Stand (€)</label>
+          <input type="number" step="0.01" [(ngModel)]="updateBalanceAmount" class="ultra-modern-input">
+        </div>
+        <p style="font-size: 12px; color: #718096; margin-top: 10px;">
+          *Dieser Wert überschreibt die Simulation für diesen Tag und bildet die Basis für die weitere Projektion.
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="glass-btn cancel-btn" (click)="isUpdateBalanceModalOpen = false">Abbrechen</button>
+        <button class="premium-save-btn" (click)="saveBalanceRecord()">Eintragen</button>
+      </div>
+    </div>
+  </div>
+}

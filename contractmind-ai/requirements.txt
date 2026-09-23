@@ -6,3 +6,8 @@ uvicorn
 python-multipart
 haystack-ai
 ollama-haystack
+rapidfuzz
+pytest
+fints
+cryptography
+httpx
